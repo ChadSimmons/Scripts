@@ -2,6 +2,7 @@
 #   Set-WSUSandIISsettings.ps1
 #   Configure WSUS and IIS for new requirements and recommendations
 #.Description
+#   This script should be executed AFTER WSUS is installed.
 #   Install patches/updates required for WSUS
 #   Service WSUS
 #   Apply IIS configurations
@@ -9,12 +10,13 @@
 #      https://blogs.technet.microsoft.com/wsus/2016/05/05/the-long-term-fix-for-kb3148812-issues
 #      https://technet.microsoft.com/en-us/library/mt589500.aspx#bkmk_ScaleSieSystems
 #      http://www.mnscug.org/blogs/brian-mason/361-how-to-melt-a-sup
-#.Note
+#.Notes
 #   === Change Log / History ===
+#   2017/01/05 Chad.Simmons@CatapultSystems.com - minor syntax changes
 #   2016/12/01 Chad.Simmons@CatapultSystems.com - Created
-#   === Changes to Make ===
+#   === Proposed Changes ===
 #   TODO: Address hotfixes for servers other than Windows Server 2012 R2.  Updates for older versions are different.  Updates for Windows Server 2016 are not needed.
-#   TODO: add Windows Application Event and CMTrace logging
+#   TODO: add Windows Application Event and custom CMTrace logging
 
 #region Parameters and variable initialization
 #
@@ -26,7 +28,7 @@ Param(
 )
 #region    ========== Debug code
 <# 
-$IISMemoryMultiplier
+$IISMemoryMultiplier=4
 $MaxMBps=25
 $DownloadPath = "$env:Temp"
 #>
