@@ -1,0 +1,1 @@
+add MSU, EXE, and CAB files to this folder or a subfolder in this folder
