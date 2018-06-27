@@ -1,18 +1,19 @@
-#Requires -Version 2.0
 #.Synopsis
 #   Upload-ConfigMgrClientLogs.ps1
 #   Compress ConfigMgr setup logs, client logs, and custom logs and copy to the specified Server or the associated Management Point
 #.Notes
-#	This script is maintained at https://github.com/ChadSimmons/Scripts/ConfigMgr
+#	This script is maintained at https://github.com/ChadSimmons/Scripts/blob/master/ConfigMgr/Troubleshooting/Upload-ConfigMgrClientLogs.ps1
 #	Additional information about the function or script.
-#   - This script should be compatible with PowerShell 2.0 to support Windows 7 default version as well as older operating systems
-#   - This script can be deployed as a ConfigMgr Package, Application, Compliance Setting, or Script
+#   - This script is compatible with PowerShell 2.0 - 5.1 to support Windows 7 default PowerShell version and newer operating systems
+#   - This script can be deployed as a ConfigMgr Package, Application, Compliance Setting, or with minor changes a Script 
 #	========== Change Log History ==========
+#	- 2018/06/27 by Chad.Simmons@CatapultSystems.com - Added additional comments/instructions and fixed some snytax errors
 #	- 2018/06/14 by Chad.Simmons@CatapultSystems.com - Added additional inventory including from https://www.windowsmanagementexperts.com/configmgr-run-script-collect-logs/configmgr-run-script-collect-logs.htm
 #	- 2018/06/13 by Chad.Simmons@CatapultSystems.com - Added function to compress files with PowerShell 2.0 from http://blog.danskingdom.com/module-to-synchronously-zip-and-unzip-using-powershell-2-0
 #	- 2017/10/30 by Chad.Simmons@CatapultSystems.com - Created
 #	- 2017/10/30 by Chad@ChadsTech.net - Created
 #	=== To Do / Proposed Changes ===
+#	- TODO: Handle ConfigMgr Script parameter limitations
 #	- TODO: Detect if running as a ConfigMgr Script and format output as JSON
 #	========== Additional References and Reading ==========
 #   - Based on https://blogs.technet.microsoft.com/setprice/2017/08/16/automating-collection-of-config-mgr-client-logs
@@ -20,13 +21,14 @@
 #   - Based on https://www.windowsmanagementexperts.com/configmgr-run-script-collect-logs/configmgr-run-script-collect-logs.htm
 #   -             https://blogs.msdn.microsoft.com/rkramesh/2016/09/19/sccm-client-log-collection-for-troubleshooting/
 
+
 [CmdletBinding(SupportsShouldProcess=$False,ConfirmImpact='None')] 
-Param ( [switch]$DeleteLocalArchive, [switch]$SuppressConsoleOutput )
+#Param ( [switch]$DeleteLocalArchive, [switch]$SuppressConsoleOutput=$true )
 #Set Variables
 $LogServer = '' #if blank, the client Management Point will be used
 $SharePath = 'ConfigMgrClientLogs/ConfigMgrClient'
-If (-not($PSBoundParameters.ContainsKey('DeleteLocalArchive')) { $DeleteLocalArchive = $false }
-#If Running as a ConfigMgr Script, set SuppressConsoleOutput to True so the only thing logged is the final status
+If (-not($PSBoundParameters.ContainsKey('DeleteLocalArchive'))) { $DeleteLocalArchive = $false }
+#If Running as a ConfigMgr Script, comment out the Param statement and set SuppressConsoleOutput to True so the only thing logged is the final status
 $SuppressConsoleOutput = $true
 
 $LogPaths = @() #create a hashtable of Log Names and Paths.  The ConfigMgr client logs and ccmsetup logs are added to the list later
@@ -358,13 +360,13 @@ Function Compress-ZipFile {
 Function LogInfo ($FilePath = $CustomInventoryFile,$message) {
 	Add-Content -Path "$CustomInventoryFile" -Value "$message`n"
 }
-Function GatherLogs(){
+Function GatherLogs() {
   # Gather logs
   # Collect the IPConfig /All
   LogInfo -Message "`t - Collecting : IPConfig"
   $colItems = Get-WmiObject -class "Win32_NetworkAdapterConfiguration" -computername $ClientHostname | Where {$_.IPEnabled -Match "True"}
   foreach ($objItem in $colItems) {      
-       LogInfo -Message "`t `t `t `t " + $objItem.Description)
+       LogInfo -Message "`t `t `t `t " + $objItem.Description
        LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t Physical Address. . . . . . . . . : " + $objItem.MACAddress
        LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t IPv4v6 Address. . . . . . . . . . : " + $objItem.IPAddress
        LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t Subnet Mask . . . . . . . . . . . : " + $objItem.IPSubnet
@@ -472,7 +474,7 @@ $LogPaths | ForEach-Object {
 }
 
 #get System Informaiton
-msinfo32.exe /report "$TempPath\MSInfo32.txt"
+Start-Process -FilePath "$env:WinDir\System32\msinfo32.exe" -ArgumentList '/report',"$TempPath\MSInfo32.txt" -Wait
 
 #region    from https://blogs.msdn.microsoft.com/rkramesh/2016/09/19/sccm-client-log-collection-for-troubleshooting
 Set-Variable -Name CustomInventoryFile -Scope Script -Value "$TempPath\CustomInventory.txt"
@@ -491,7 +493,7 @@ if ((Get-WmiObject -class Win32_OperatingSystem).version -lt 9) {
 }
 
 # run gpresult
-GPResult.exe /scope computer /h $TempPath\GPResult.html
+Start-Process -FilePath "$env:WinDir\System32\GPResult.exe" -ArgumentList '/scope','computer','/h',"$TempPath\GPResult.html" -Wait
 
 # export event logs
 $eventLogsPath = "$TempPath\EventLogs"
