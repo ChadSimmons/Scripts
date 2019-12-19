@@ -5,9 +5,9 @@
 #	This script is maintained at https://github.com/ChadSimmons/Scripts/blob/master/ConfigMgr/Troubleshooting/Upload-ConfigMgrClientLogs.ps1
 #	Additional information about the function or script.
 #   - This script is compatible with PowerShell 2.0 - 5.1 to support Windows 7 default PowerShell version and newer operating systems
-#   - This script can be deployed as a ConfigMgr Package, Application, Compliance Setting, or with minor changes a Script 
+#   - This script can be deployed as a ConfigMgr Package, Application, Compliance Setting, or with minor changes a Script
 #	========== Change Log History ==========
-#	- 2018/06/27 by Chad.Simmons@CatapultSystems.com - Added additional comments/instructions and fixed some snytax errors
+#	- 2018/06/27 by Chad.Simmons@CatapultSystems.com - Added additional comments/instructions and fixed some syntax errors
 #	- 2018/06/14 by Chad.Simmons@CatapultSystems.com - Added additional inventory including from https://www.windowsmanagementexperts.com/configmgr-run-script-collect-logs/configmgr-run-script-collect-logs.htm
 #	- 2018/06/13 by Chad.Simmons@CatapultSystems.com - Added function to compress files with PowerShell 2.0 from http://blog.danskingdom.com/module-to-synchronously-zip-and-unzip-using-powershell-2-0
 #	- 2017/10/30 by Chad.Simmons@CatapultSystems.com - Created
@@ -22,7 +22,7 @@
 #   -             https://blogs.msdn.microsoft.com/rkramesh/2016/09/19/sccm-client-log-collection-for-troubleshooting/
 
 
-[CmdletBinding(SupportsShouldProcess=$False,ConfirmImpact='None')] 
+[CmdletBinding(SupportsShouldProcess=$False,ConfirmImpact='None')]
 #Param ( [switch]$DeleteLocalArchive, [switch]$SuppressConsoleOutput=$true )
 #Set Variables
 $LogServer = '' #if blank, the client Management Point will be used
@@ -45,7 +45,7 @@ Function Get-ScriptPath {
 	#.Synopsis
 	#   Get the folder of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	If ($psISE -and [string]::IsNullOrEmpty($script:ScriptPath)) {
 		$script:ScriptPath = Split-Path $psISE.CurrentFile.FullPath -Parent #this works in psISE and psISE functions
 	} else {
@@ -62,7 +62,7 @@ Function Get-ScriptName {
 	#.Synopsis
 	#   Get the name of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	If ($psISE) {
 		$script:ScriptName = Split-Path $psISE.CurrentFile.FullPath -Leaf #this works in psISE and psISE functions
 	} else {
@@ -88,9 +88,9 @@ Function Write-LogMessage {
 		{ @('2', 'Warn', 'Warning') -contains $_ } { $intType = 2 } #2 = Warning (yellow)
 		Default { $intType = 1 } #1 = Normal
 	}
-	If ($Component -eq $null) {$Component = ' '} #Must not be null
+	If ($null -eq $Component) { $Component = ' ' } #Must not be null
 	try {
-		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
+		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$intType`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 	} catch {
 		Write-Error "Failed to write to the log file '$LogFile'"
 	}
@@ -146,13 +146,13 @@ Function MoveDirectoryIntoZipFile($parentInZipFileShell, $pathOfItemToCopy) {
 	if ($parentInZipFileShell.IsFolder)
 	{ $parentInZipFileShell = $parentInZipFileShell.GetFolder }
 	$itemToCopyShell = $parentInZipFileShell.ParseName($nameOfItemToCopy)
-	
+
 	# If this item does not exist in the Zip file yet, or it is a file, move it over.
-	if ($itemToCopyShell -eq $null -or !$itemToCopyShell.IsFolder)
+	if ($null -eq $itemToCopyShell -or !$itemToCopyShell.IsFolder)
 	{
 		$parentInZipFileShell.MoveHere($pathOfItemToCopy)
-		
-		# Wait for the file to be moved before continuing, to avoid erros about the zip file being locked or a file not being found.
+
+		# Wait for the file to be moved before continuing, to avoid errors about the zip file being locked or a file not being found.
 		while (Test-Path -Path $pathOfItemToCopy)
 		{ Start-Sleep -Milliseconds 10 }
 	}
@@ -173,7 +173,7 @@ Function MoveFilesOutOfZipFileItems($shellItems, $directoryToMoveFilesToShell, $
 	{
 		# If this is a directory, recursively call this function to iterate over all files/directories within it.
 		if ($shellItem.IsFolder)
-		{ 
+		{
 			$totalItems += MoveFilesOutOfZipFileItems -shellItems $shellItem.GetFolder.Items() -directoryToMoveFilesTo $directoryToMoveFilesToShell -fileNameToMatch $fileNameToMatch
 		}
 		# Else this is a file.
@@ -184,7 +184,7 @@ Function MoveFilesOutOfZipFileItems($shellItems, $directoryToMoveFilesToShell, $
 			{
 				$directoryToMoveFilesToShell.MoveHere($shellItem)
 			}
-		}			
+		}
 	}
 }
 Function Compress-ZipFile {
@@ -192,16 +192,16 @@ Function Compress-ZipFile {
 	param (
 		[parameter(Position=1,Mandatory=$true)]
 		[ValidateScript({Test-Path -Path $_})]
-		[string]$FileOrDirectoryPathToAddToZipFile, 
-	
+		[string]$FileOrDirectoryPathToAddToZipFile,
+
 		[parameter(Position=2,Mandatory=$false)]
 		[string]$ZipFilePath,
-		
+
 		[Alias("Force")]
 		[switch]$OverwriteWithoutPrompting
 	)
-	
-	BEGIN { 
+
+	BEGIN {
         Write-Verbose "Starting Function Compress-ZipFile -FileOrDirectoryPathToAddToZipFile $FileOrDirectoryPathToAddToZipFile -ZipFilePath $ZipFilePath -OverwriteWithoutPrompting $OverwriteWithoutPrompting..."
     }
 	END {
@@ -210,10 +210,10 @@ Function Compress-ZipFile {
 	PROCESS {
 		# If a Zip File Path was not given, create one in the same directory as the file/directory being added to the zip file, with the same name as the file/directory.
 		if ($ZipFilePath -eq $null -or $ZipFilePath.Trim() -eq [string]::Empty) { $ZipFilePath = Join-Path -Path $FileOrDirectoryPathToAddToZipFile -ChildPath '.zip' }
-		
+
 		# If the Zip file to create does not have an extension of .zip (which is required by the shell.application), add it.
 		if (!$ZipFilePath.EndsWith('.zip', [StringComparison]::OrdinalIgnoreCase)) { $ZipFilePath += '.zip' }
-		
+
 		# If the Zip file to add the file to does not exist yet, create it.
 		if (-not(Test-Path -Path $ZipFilePath -PathType Leaf)) { New-Item -Path $ZipFilePath -ItemType File > $null }
 
@@ -222,7 +222,7 @@ Function Compress-ZipFile {
 
 		# Get the number of files and directories to add to the Zip file.
 		$numberOfFilesAndDirectoriesToAddToZipFile = (Get-ChildItem -Path $FileOrDirectoryPathToAddToZipFile -Recurse -Force).Count
-		
+
 		# Get if we are adding a file or directory to the Zip file.
 		$itemToAddToZipIsAFile = Test-Path -Path $FileOrDirectoryPathToAddToZipFile -PathType Leaf
 
@@ -237,28 +237,28 @@ Function Compress-ZipFile {
 		# If the file/directory does not already exist in the Zip file, or it does exist, but it is a file and the user wants to be prompted on conflicts, then we can perform a simple copy into the Zip file.
 		$fileOrDirectoryInZipFileShell = $zipShell.ParseName($fileOrDirectoryNameToAddToZipFile)
 		$itemToAddToZipIsAFileAndUserWantsToBePromptedOnConflicts = ($itemToAddToZipIsAFile -and !$OverwriteWithoutPrompting)
-		if ($fileOrDirectoryInZipFileShell -eq $null -or $itemToAddToZipIsAFileAndUserWantsToBePromptedOnConflicts) {
+		if ($null -eq $fileOrDirectoryInZipFileShell -or $itemToAddToZipIsAFileAndUserWantsToBePromptedOnConflicts) {
 			$canPerformSimpleCopyIntoZipFile = $true
 		}
-		
+
 		# If we can perform a simple copy operation to get the file/directory into the Zip file.
 		if ($canPerformSimpleCopyIntoZipFile) {
 			# Start copying the file/directory into the Zip file since there won't be any conflicts. This is an asynchronous operation.
 			$zipShell.CopyHere($FileOrDirectoryPathToAddToZipFile)	# Copy Flags are ignored when copying files into a zip file, so can't use them like we did with the Expand-ZipFile function.
-			
+
 			# The Copy operation is asynchronous, so wait until it is complete before continuing.
 			# Wait until we can see that the file/directory has been created.
-			while ($zipShell.ParseName($fileOrDirectoryNameToAddToZipFile) -eq $null)
+			while ($null -eq $zipShell.ParseName($fileOrDirectoryNameToAddToZipFile))
 			{ Start-Sleep -Milliseconds 100 }
-			
+
 			# If we are copying a directory into the Zip file, we want to wait until all of the files/directories have been copied.
 			if (!$itemToAddToZipIsAFile) {
 				# Get the number of files and directories that should be copied into the Zip file.
 				$numberOfItemsToCopyIntoZipFile = (Get-ChildItem -Path $FileOrDirectoryPathToAddToZipFile -Recurse -Force).Count
-			
+
 				# Get a handle to the new directory we created in the Zip file.
 				$newDirectoryInZipFileShell = $zipShell.ParseName($fileOrDirectoryNameToAddToZipFile)
-				
+
 				# Wait until the new directory in the Zip file has the expected number of files and directories in it.
 				while ((GetNumberOfItemsInZipFileItems -shellItems $newDirectoryInZipFileShell.GetFolder.Items()) -lt $numberOfItemsToCopyIntoZipFile)
 				{ Start-Sleep -Milliseconds 100 }
@@ -272,18 +272,18 @@ Function Compress-ZipFile {
 			$tempDirectoryPath = $null
 			$tempDirectoryPath = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ([System.IO.Path]::GetRandomFileName())
 			New-Item -Path $tempDirectoryPath -ItemType Container > $null
-		
+
 			# If we will be moving a directory into the temp directory.
 			$numberOfItemsInZipFilesDirectory = 0
 			if ($fileOrDirectoryInZipFileShell.IsFolder) {
 				# Get the number of files and directories in the Zip file's directory.
 				$numberOfItemsInZipFilesDirectory = GetNumberOfItemsInZipFileItems -shellItems $fileOrDirectoryInZipFileShell.GetFolder.Items()
 			}
-		
+
 			# Start moving the file/directory out of the Zip file and into a temp directory. This is an asynchronous operation.
 			$tempDirectoryShell = $shell.NameSpace($tempDirectoryPath)
 			$tempDirectoryShell.MoveHere($fileOrDirectoryInZipFileShell)
-			
+
 			# If we are moving a directory, we need to wait until all of the files and directories in that Zip file's directory have been moved.
 			$fileOrDirectoryPathInTempDirectory = Join-Path -Path $tempDirectoryPath -ChildPath $fileOrDirectoryNameToAddToZipFile
 			if ($fileOrDirectoryInZipFileShell.IsFolder) {
@@ -297,59 +297,59 @@ Function Compress-ZipFile {
 				while (!(Test-Path -Path $fileOrDirectoryPathInTempDirectory))
 				{ Start-Sleep -Milliseconds 100 }
 			}
-			
+
 			# We want to copy the file/directory to add to the Zip file to the same location in the temp directory, so that files/directories are merged.
 			# If we should automatically overwrite files, do it.
 			if ($OverwriteWithoutPrompting) {
                 Copy-Item -Path $FileOrDirectoryPathToAddToZipFile -Destination $tempDirectoryPath -Recurse -Force
             }
 			# Else the user should be prompted on each conflict.
-			else { 
+			else {
                 Copy-Item -Path $FileOrDirectoryPathToAddToZipFile -Destination $tempDirectoryPath -Recurse -Confirm -ErrorAction SilentlyContinue
             }	# SilentlyContinue errors to avoid an error for every directory copied.
 
-			# For whatever reason the zip.MoveHere() function is not able to move empty directories into the Zip file, so we have to put dummy files into these directories 
+			# For whatever reason the zip.MoveHere() function is not able to move empty directories into the Zip file, so we have to put dummy files into these directories
 			# and then remove the dummy files from the Zip file after.
 			# If we are copying a directory into the Zip file.
 			$dummyFileNamePrefix = 'Dummy.File'
 			[int]$numberOfDummyFilesCreated = 0
 			if ($fileOrDirectoryInZipFileShell.IsFolder) {
 				# Place a dummy file in each of the empty directories so that it gets copied into the Zip file without an error.
-				$emptyDirectories = Get-ChildItem -Path $fileOrDirectoryPathInTempDirectory -Recurse -Force -Directory | Where-Object { (Get-ChildItem -Path $_ -Force) -eq $null }
+				$emptyDirectories = Get-ChildItem -Path $fileOrDirectoryPathInTempDirectory -Recurse -Force -Directory | Where-Object { $null -eq (Get-ChildItem -Path $_ -Force) }
 				foreach ($emptyDirectory in $emptyDirectories) {
 					$numberOfDummyFilesCreated++
 					New-Item -Path (Join-Path -Path $emptyDirectory.FullName -ChildPath "$dummyFileNamePrefix$numberOfDummyFilesCreated") -ItemType File -Force > $null
 				}
-			}		
+			}
 
 			# If we need to copy a directory back into the Zip file.
 			if ($fileOrDirectoryInZipFileShell.IsFolder) {
 				MoveDirectoryIntoZipFile -parentInZipFileShell $zipShell -pathOfItemToCopy $fileOrDirectoryPathInTempDirectory
-			} 
+			}
             # Else we need to copy a file back into the Zip file.
-            else { 
+            else {
 				# Start moving the merged file back into the Zip file. This is an asynchronous operation.
 				$zipShell.MoveHere($fileOrDirectoryPathInTempDirectory)
 			}
-			
+
 			# The Move operation is asynchronous, so wait until it is complete before continuing.
 			# Sleep until all of the files have been moved into the zip file. The MoveHere() function leaves empty directories behind, so we only need to watch for files.
 			do {
 				Start-Sleep -Milliseconds 100
 				$files = Get-ChildItem -Path $fileOrDirectoryPathInTempDirectory -Force -Recurse | Where-Object { !$_.PSIsContainer }
-			} while ($files -ne $null)
-			
+			} while ($null -ne $files)
+
 			# If there are dummy files that need to be moved out of the Zip file.
 			if ($numberOfDummyFilesCreated -gt 0) {
 				# Move all of the dummy files out of the supposed-to-be empty directories in the Zip file.
 				MoveFilesOutOfZipFileItems -shellItems $zipShell.items() -directoryToMoveFilesToShell $tempDirectoryShell -fileNamePrefix $dummyFileNamePrefix
-				
+
 				# The Move operation is asynchronous, so wait until it is complete before continuing.
 				# Sleep until all of the dummy files have been moved out of the zip file.
 				do {
 					Start-Sleep -Milliseconds 100
 					[Object[]]$files = Get-ChildItem -Path $tempDirectoryPath -Force -Recurse | Where-Object { !$_.PSIsContainer -and $_.Name.StartsWith($dummyFileNamePrefix) }
-				} while ($files -eq $null -or $files.Count -lt $numberOfDummyFilesCreated)
+				} while ($null -eq $files -or $files.Count -lt $numberOfDummyFilesCreated)
 			}
 			# Delete the temp directory that we created.
 			Remove-Item -Path $tempDirectoryPath -Force -Recurse > $null
@@ -364,8 +364,8 @@ Function GatherLogs() {
   # Gather logs
   # Collect the IPConfig /All
   LogInfo -Message "`t - Collecting : IPConfig"
-  $colItems = Get-WmiObject -class "Win32_NetworkAdapterConfiguration" -computername $ClientHostname | Where {$_.IPEnabled -Match "True"}
-  foreach ($objItem in $colItems) {      
+  $colItems = Get-WmiObject -class "Win32_NetworkAdapterConfiguration" -ComputerName $ClientHostname | Where-Object {$_.IPEnabled -Match "True"}
+  foreach ($objItem in $colItems) {
        LogInfo -Message "`t `t `t `t " + $objItem.Description
        LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t Physical Address. . . . . . . . . : " + $objItem.MACAddress
        LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t IPv4v6 Address. . . . . . . . . . : " + $objItem.IPAddress
@@ -379,22 +379,22 @@ Function GatherLogs() {
   # Collect the CCMCache folder info
   $CCMCacheFolder = "C:\Windows\ccmcache"
   $colItems = (Get-ChildItem $CCMCacheFolder -recurse | Where-Object {$_.PSIsContainer -eq $True} | Sort-Object)
-  $CCMCachSize=0
+  $CCMCacheSize=0
   foreach ($i in $colItems) {
         $subFolderItems = (Get-ChildItem $i.FullName | Measure-Object -property length -sum)
-        $CCMCachSize=$CCMCachSize+"{0:N2}" -f ($subFolderItems.sum / 1MB)
+        $CCMCacheSize=$CCMCacheSize+"{0:N2}" -f ($subFolderItems.sum / 1MB)
   }
-  
-  $GetCCMCachSize = "{0:N2}" -f ($CCMCachSize/1024)
-  $CCMCache = Get-ChildItem -Path $CCMCacheFolder -Recurse | Out-File ($FolderPath.FullName + "\CCMCache - "+ $GetCCMCachSize +" GB.txt")
+
+  $GetCCMCacheSize = "{0:N2}" -f ($CCMCacheSize/1024)
+  $CCMCache = Get-ChildItem -Path $CCMCacheFolder -Recurse | Out-File ($FolderPath.FullName + "\CCMCache - "+ $GetCCMCacheSize +" GB.txt")
   LogInfo -Message "`t - Collecting : CCMCache Info"
-  LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t CCMCache folder size is "+ $GetCCMCachSize +" GB"
-  If ($GetCCMCachSize -gt 5) {LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t Warning: CCMCache folder size is more than 5 GB" }
+  LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t CCMCache folder size is "+ $GetCCMCacheSize +" GB"
+  If ($GetCCMCacheSize -gt 5) {LogInfo -Message "`t `t `t `t `t `t `t `t `t `t `t Warning: CCMCache folder size is more than 5 GB" }
 
   ## Applications installed
   #Write-Host "`t - Collecting : Installed Applications"
   #$InstalledApp = Wmic Product | Format-Table -AutoSize | Out-String -Width 1024 | Out-File ($FolderPath.FullName + "\SoftwareInstalled.txt")
-  #LogInfo ("`t - Collecting : Installed Applications")        
+  #LogInfo ("`t - Collecting : Installed Applications")
 }
 #endregion from https://blogs.msdn.microsoft.com/rkramesh/2016/09/19/sccm-client-log-collection-for-troubleshooting
 
@@ -473,7 +473,7 @@ $LogPaths | ForEach-Object {
 	}
 }
 
-#get System Informaiton
+#get System Information
 Start-Process -FilePath "$env:WinDir\System32\msinfo32.exe" -ArgumentList '/report',"$TempPath\MSInfo32.txt" -Wait
 
 #region    from https://blogs.msdn.microsoft.com/rkramesh/2016/09/19/sccm-client-log-collection-for-troubleshooting
@@ -488,7 +488,7 @@ $InstalledUpdates = WMIC QFE GET | Format-Table -AutoSize | Out-String -Width 10
 # get Windows Update log
 if ((Get-WmiObject -class Win32_OperatingSystem).version -lt 9) {
 	Copy-Item -Path "$env:WinDir\WindowsUpdate.log" -Destination "$TempPath\WindowsUpdate.log"
-} else { 
+} else {
 	Get-WindowsUpdateLog -LogPath "$TempPath\WindowsUpdate.log"
 }
 
@@ -509,15 +509,15 @@ wevtutil.exe epl "Microsoft-Windows-Windows Defender/Operational" "$eventLogsPat
 #endregion from https://www.windowsmanagementexperts.com/configmgr-run-script-collect-logs/configmgr-run-script-collect-logs.htm
 
 
-#Compress the tempoary folder
+#Compress the temporary folder
 try {
     #This method requires PowerShell 2.0
     Compress-ZipFile -FileOrDirectoryPathToAddToZipFile "$TempPath" -ZipFilePath "$CCMclientLogsPath\$localArchiveFileName" -OverwriteWithoutPrompting
- 
+
     #This method requires PowerShell 3.0
     #Add-Type -Assembly System.IO.Compression.FileSystem
 	#[System.IO.Compression.ZipFile]::CreateFromDirectory("$TempPath", "$CCMclientLogsPath\$localArchiveFileName", $([System.IO.Compression.CompressionLevel]::Optimal), $false)
-    
+
     Write-LogMessage -Message "Compressed folder '$TempPath' to '$CCMclientLogsPath\$localArchiveFileName'"
 	#Remove the temporary folders and files
 	Remove-Item -Path "$TempPath" -Recurse -Force -ErrorAction SilentlyContinue

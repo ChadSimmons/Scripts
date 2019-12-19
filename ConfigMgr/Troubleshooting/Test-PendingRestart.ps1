@@ -12,7 +12,7 @@
 #    DomainJoin = Detects a domain join operation (Windows 2003+)
 #    ComputerRename = Detects a computer rename operation (Windows 2003+)
 #    FileRename = PendingFileRenameOperations (Windows 2003+)
-#    PendFileRenVal = PendingFilerenameOperations registry value; used to filter if need be, some Anti-
+#    PendFileRenVal = PendingFileRenameOperations registry value; used to filter if need be, some Anti-
 #                     Virus leverage this key for def/dat removal, giving a false positive PendingRestart
 #.EXAMPLE
 #    Test-PendingRestart.ps1 -Computer RemoteComputerName
@@ -65,8 +65,8 @@ Function Restart-ComputerEx {
 		[string]$RestartMessage
 	)
 	#Write-LogMessage -Message "$ComputerName`: Restarting with a delay of $RestartDelaySeconds seconds"
-	#not using PowerShell Restart-Computer becase no user interface (GUI) is presented
-	Return $(Start-Process -FilePath "$env:WinDir\System32\shutdown.exe" -ArgumentList '/m',"\\$Computername",'/i','/r',"/t $RestartDelaySeconds",'/f').ExitCode #/d p|u:xx:yy
+	#not using PowerShell Restart-Computer because no user interface (GUI) is presented
+	Return $(Start-Process -FilePath "$env:WinDir\System32\shutdown.exe" -ArgumentList '/m',"\\$ComputerName",'/i','/r',"/t $RestartDelaySeconds",'/f').ExitCode #/d p|u:xx:yy
 }
 Function Test-PendingRestartEx {
 	[cmdletbinding()]
@@ -257,6 +257,6 @@ If ($doRestart) {
 }
 
 #	Output result table to console
-$Results | Select-Object Computer, Online, RestartPending, RestartAction, CBServicing, WindowsUpdate, CCMClient, ComputerRename, DomainJoin, FileRename, FileRenameVal, Comment | Format-Table -Autosize
+$Results | Select-Object Computer, Online, RestartPending, RestartAction, CBServicing, WindowsUpdate, CCMClient, ComputerRename, DomainJoin, FileRename, FileRenameVal, Comment | Format-Table -AutoSize
 If ($ResultsFile) { Write-Host "Results saved to $ResultsFile" }
 #endregion ######################### Main Script ###############################

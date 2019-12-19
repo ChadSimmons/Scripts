@@ -460,9 +460,9 @@ Function Connect-ConfigMgr {
 		[Parameter(Mandatory = $false)][ValidateLength(3, 3)][string]$SiteCode,
 		[Parameter(Mandatory = $false)][ValidateLength(1, 255)][string]$SiteServer
 	)
-	If ($Env:SMS_ADMIN_UI_PATH -ne $null) {
+	If ($null -ne $Env:SMS_ADMIN_UI_PATH) {
 		#import the module if it exists
-		If ((Get-Module ConfigurationManager) -eq $null) {
+		If ($null -eq (Get-Module ConfigurationManager)) {
 			Write-Verbose 'Importing ConfigMgr PowerShell Module...'
 			$TempVerbosePreference = $VerbosePreference
 			$VerbosePreference = 'SilentlyContinue'
@@ -489,7 +489,7 @@ Function Connect-ConfigMgr {
 			}
 		}
 		# Connect to the site's drive if it is not already present
-		if ((Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue) -eq $null) {
+		if ($null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
 			Write-Verbose -Message "Creating ConfigMgr Site Drive $($SiteCode):\ on server $SiteServer"
 			# If SiteCode was not specified use the current computer
 			If ([string]::IsNullOrEmpty($SiteServer)) {

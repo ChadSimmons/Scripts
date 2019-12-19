@@ -55,7 +55,7 @@ Param (
 	[Parameter()][ValidateScript( {If ((Split-Path $_ -Leaf).IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0) { Throw "$(Split-Path $_ -Leaf) contains invalid characters!" } Else { $True } })]
 	[string[]]$ParamFile1,
 
-	[Parameter()][ValidateSet("Error", "Warn", "Info", ignorecase = $True)]
+	[Parameter()][ValidateSet("Error", "Warn", "Info", IgnoreCase = $True)]
 	[string]$ParamSelection = "Info",
 
 	[Parameter(Mandatory = $true)][ValidateNotNull()]
@@ -75,7 +75,7 @@ Param (
 	[ValidateScript( {Test-Connection -ComputerName $_ -Count 1 -Quiet})]
 	[string[]]$Computer = $env:ComputerName,
 
-	[Parameter()][ValidatePattern('^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')] #ValidatPatern https://msdn.microsoft.com/en-us/library/ms714454(v=vs.85).aspx
+	[Parameter()][ValidatePattern('^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')] #ValidatePattern https://msdn.microsoft.com/en-us/library/ms714454(v=vs.85).aspx
 	[string[]]$IPAddress1,
 
 	[Parameter()][ValidateScript( {If ($_ -match '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$') { $True } Else { Throw "$_ is not an IPV4 Address!" }})]
@@ -172,4 +172,4 @@ Try {
 ################################################################################
 ################################################################################
 #endregion ######################### Functions #################################
-}n
+}

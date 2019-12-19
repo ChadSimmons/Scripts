@@ -6,9 +6,9 @@
     Based on https://github.com/gwalkey/SSRS_Subscriptions/blob/master/New-SSRS_Subscription.ps1
 .DESCRIPTION
     Creates SSRS Report Subscription using the SSRS Web Service
-   
+
 .EXAMPLE
-    
+
 #>
 
 Param(
@@ -17,7 +17,7 @@ Param(
     [parameter(Mandatory=$false,Position=2,ValueFromPipeline)][string]$SiteCode,
     [parameter(Mandatory=$true, Position=3,ValueFromPipeline)][string]$AdvertisementID,
     [parameter(Mandatory=$false,Position=4,ValueFromPipeline)][string]$ReportPathRoot = 'ConfigMgr',
-    [parameter(Mandatory=$false,Position=5,ValueFromPipeline)][string]$emailTO = 'Chad.Simmons@fhlb.com',
+    [parameter(Mandatory=$false,Position=5,ValueFromPipeline)][string]$emailTO = 'Chad.Simmons@contoso.com',
     [parameter(Mandatory=$false,Position=6,ValueFromPipeline)][string]$emailCC = 'Chad.Simmons@CatapultSystems.com',
     [parameter(Mandatory=$false,Position=7,ValueFromPipeline)][datetime]$StartTime = $(Get-Date).AddMinutes(15),
     [parameter(Mandatory=$false,Position=8,ValueFromPipeline)][datetime]$EndTime = $((Get-Date).AddDays(31)).AddMinutes(15),
@@ -33,7 +33,7 @@ If ($psISE) {
 
     [datetime]$StartTime = $(Get-Date).AddMinutes(15)
     [datetime]$EndTime = $((Get-Date).AddDays(31)).AddMinutes(15)
-    [string]$emailTO = 'Chad.Simmons@fhlb.com'
+    [string]$emailTO = 'Chad.Simmons@contoso.com'
     [string]$emailCC = 'Chad.Simmons@CatapultSystems.com'
     [string]$SSRSServer = 'localhost'
     [string]$SiteServer = 'localhost'
@@ -49,7 +49,7 @@ Function Get-ScriptPath {
 	#.Synopsis
 	#   Get the folder of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	#   2017/07/25 by Chad@chadstech.net
 	try {
 		$script:ScriptPath = Split-Path -Path $((Get-Variable MyInvocation -Scope 1 -ErrorAction SilentlyContinue).Value).MyCommand.Path -Parent
@@ -64,7 +64,7 @@ Function Get-ScriptPath {
 Function Get-ScriptName {
 	#.Synopsis  Get the name of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	#   2017/07/25 by Chad@chadstech.net
 
 	If ($psISE) {
@@ -118,9 +118,9 @@ Function Write-CMEvent {
 		{ @('2', 'Warn', 'Warning') -contains $_ } { $intType = 2 } #2 = Warning (yellow)
         Default { $intType = 1 } #1 = Normal
 	}
-	If ($Component -eq $null) {$Component = ' '} #Must not be null
+    If ($null -eq $Component) { $Component = ' ' } #Must not be null
 	try { #write log file message
-		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
+		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$intType`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 	} catch { Write-Error "Failed to write to the log file '$LogFile'" }
 	If ($Console) { Write-Output $Message } #write to console if enabled
 }; Set-Alias -Name 'Write-LogMessage' -Value 'Write-CMEvent' -Description 'Log a message in CMTrace format'
@@ -171,7 +171,7 @@ Function CreateSSRSSubscription {
 
     # Open Web Service Connection
     Remove-Variable -Name rs2010 -ErrorAction SilentlyContinue
-    $rs2010 += New-WebServiceProxy -Uri $ReportServerUri -UseDefaultCredential;  
+    $rs2010 += New-WebServiceProxy -Uri $ReportServerUri -UseDefaultCredential;
 
     # Get Types from SSRS Webservice Namespace
     $type = $rs2010.GetType().Namespace
@@ -180,7 +180,7 @@ Function CreateSSRSSubscription {
     # http://stackoverflow.com/questions/25984874/not-able-to-create-objects-in-powershell-for-invoking-a-web-service
     # http://stackoverflow.com/questions/32611187/using-complex-objects-via-a-web-service-from-powershell
     # This XML Fragment holds Three sections
-    # 1) Extension Settings (Email or Fileshare, where, who etc)
+    # 1) Extension Settings (Email or FileShare, where, who etc)
     # 2) Schedule
     # 3) Report Parameters
 
@@ -188,7 +188,7 @@ Function CreateSSRSSubscription {
     $ActiveStateDataType = ($type + '.ActiveState')
     $ParmValueDataType = ($type + '.ParameterValue')
 
-    # Create New ExtensionSettings Object based on Type 
+    # Create New ExtensionSettings Object based on Type
     $extSettings = New-Object ($ExtensionSettingsDataType)
     $AllReportParameters = New-Object ($ParmValueDataType)
 
@@ -202,7 +202,7 @@ Function CreateSSRSSubscription {
     $xExtensionSettings = $xSubscription.ExtensionSettings
 
     # Get more Report parameters
-    #$report = [string]::Join("", $xSubscription.ReportPath, $xSubscription.ReportName) 
+    #$report = [string]::Join("", $xSubscription.ReportPath, $xSubscription.ReportName)
     $report = $xSubscription.ReportPath+$xSubscription.ReportName
     $desc = $xSubscription.Description
     $event = $xSubscription.EventType
@@ -241,7 +241,7 @@ Function CreateSSRSSubscription {
     } catch {
         Write-LogMessage -Message $("Exception: {0} Inner: {1}" -f $_.Exception.Message, $_.Exception.Message.InnerException) -Type Error
         Write-Error ("Exception: {0} Inner: {1}" -f $_.Exception.Message, $_.Exception.Message.InnerException)
-        $error[0] | fl -force
+        $error[0] | Format-List -force
         Stop-Script -ReturnCode $_.Exception.HResult
         Throw "Failed! $($error[0])"
     }
@@ -275,14 +275,14 @@ If ($AdvertisementIDisXML -eq $true) {
    } else {
         Write-LogMessage -Message "Parameter file '$AdvertisementID' was not found" -Type Error
         Stop-Script -ReturnCode 2
-   } 
+   }
 }
 Write-LogMessage -Message "Imported Parameters: $($Parameters | Out-String)"
 
 #endregion ######################### Initialization ############################
 
 #region    ######################### Main Script ###############################
-If ($SiteCode.Length -ne 3) { #$PSBoundParameters.ContainsKey('SiteCode') -eq 
+If ($SiteCode.Length -ne 3) { #$PSBoundParameters.ContainsKey('SiteCode') -eq
     $SiteCode = (Get-WmiObject -ComputerName $SiteServer -Namespace "root\SMS" -ClassName "SMS_ProviderLocation" -Property "SiteCode").SiteCode
 }
 
@@ -392,13 +392,13 @@ ForEach ($AdvertID in $AdvertisementID.Split(',')) {
 	    </ReportParameter>
     </Subscription>"
 
-    #[string]$myscheduleXml = 
+    #[string]$myscheduleXml =
     #"
     #<ScheduleDefinition>
     #    <StartDateTime>$myYear-$((get-date).Month)-15T06:00:00.000-04:00</StartDateTime>
     #</ScheduleDefinition>
     #"
-    [string]$myscheduleXml = 
+    [string]$myscheduleXml =
     "
     <ScheduleDefinition>
         <StartDateTime>$(Get-Date -Date $StartTime -Format 'yyyy-MM-ddTHH:mm:ss.fffzzz')</StartDateTime>
