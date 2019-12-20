@@ -66,7 +66,7 @@ End {
 	If ($ObjectList.count -gt 0) {
 		Update-SCCMObjectSecurityScopes -ObjectID $ObjectList.CI_ID -ObjectType 'Application' -AddScopeName $ProdScopeName -RemoveScopeName $LabScopeName -SiteCode $SiteCode
 	}
-	Write-Progress @Progress -CurrentOperation 'Processng Packages' #-PercentComplete $($i / $($List.count) * 100)
+	Write-Progress @Progress -CurrentOperation 'Processing Packages' #-PercentComplete $($i / $($List.count) * 100)
 	$ObjectList = Get-WmiObject -Computer $SiteServer -Namespace "ROOT\SMS\Site_$($SiteCode)" -Class SMS_Package -Filter "ObjectPath='/$ProdFolderName'"
 	#$ObjectList | Select Name
 	Write-LogMessage -Message "Processing $($ObjectList.Count) Packages"
@@ -81,7 +81,7 @@ End {
 		Update-SCCMObjectSecurityScopes -ObjectID $ObjectList.CI_ID -ObjectType 'TaskSequence' -AddScopeName $ProdScopeName -RemoveScopeName $LabScopeName -SiteCode $SiteCode
 	}
 
-	#Configure Security Scopes for ConfigMgr objects in the non-Production folders (i.e. subfolders to the Produciton folder)
+	#Configure Security Scopes for ConfigMgr objects in the non-Production folders (i.e. subfolders to the Production folder)
 	#This is intentionally not configured to prevent moving object from Prod to Lab
 
 	#endregion ######################### Main Script ###############################

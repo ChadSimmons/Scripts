@@ -209,7 +209,7 @@ Function Get-BiosInfo {
     }
 }
 Function Get-OsInfo {
-    # $Info = Get-WMIObject -class Win32_OperatingSystem | Select OperatingSstemSKU, OSType, OSProductSuite, ProductType, SystemDevice, SystemDirectory, SystemDrive, BuildType, CurrentTimeZone
+    # $Info = Get-WMIObject -class Win32_OperatingSystem | Select OperatingSystemSKU, OSType, OSProductSuite, ProductType, SystemDevice, SystemDirectory, SystemDrive, BuildType, CurrentTimeZone
     $Info = Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_OperatingSystem'
     Set-Var -Name 'zTS_OSName' -Value $Info.Caption
     Set-Var -Name 'zTS_OSVersion' -Value $Info.Version -Alias 'OSCurrentVersion'
@@ -222,7 +222,7 @@ Function Get-OsInfo {
     Set-Var -Name 'zTS_OSLastBootUpTime' -Value $Info.LastBootUpTime
     Set-Var -Name 'zTS_OSLastBootUpTimestamp' -Value $([System.Management.ManagementDateTimeConverter]::ToDateTime($Info.LastBootUpTime))
     Set-Var -Name 'zTS_OSBootDevice' -Value $Info.BootDevice
-    Set-Var -Name 'zTS_OSSKU' -Value $Info.OperatingSytemSKU
+    Set-Var -Name 'zTS_OSSKU' -Value $Info.OperatingSystemSKU
     Set-Var -Name 'zTS_OSType' -Value $Info.OSType
     Set-Var -Name 'zTS_OSProductSuite' -Value $Info.OSProductSuite
     Set-Var -Name 'zTS_OSProductType' -Value $Info.ProductType
@@ -234,9 +234,9 @@ Function Get-OsInfo {
 }
 Function Get-SystemEnclosureInfo {
     #If a laptop is docked there will be 2 class instances
-    $Info = Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_SystemEnclosure' -Property SMBIOSAssetTag,ChassisTypes | Where-Object {$_.ChassisTypes -notcontains 12} | Select-Object -First 1
+    $Info = Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_SystemEnclosure' -Property SMBIOSAssetTag,ChassisTypes | Where-Object {$_.ChassisTypes -NotContains 12} | Select-Object -First 1
     Set-Var -Name 'zTS_BIOSAssetTag' -Value $Info.SMBIOSAssetTag
-    $Info.ChassisTypes | Where-Object {$_ -notcontains 12} | ForEach-Object {
+    $Info.ChassisTypes | Where-Object {$_ -NotContains 12} | ForEach-Object {
         Set-Var -Name 'zTS_ComputerChassisID' -Value $_.ToString()
         if ($TSvars.ContainsKey('zTS_ComputerIsDesktop')) {
             Set-Var -Name 'zTS_ComputerIsDesktop' -Value [string]$DesktopChassisTypes.Contains($_.ToString()) -Force -Alias 'IsDesktop'
@@ -255,7 +255,7 @@ Function Get-SystemEnclosureInfo {
 Function Get-NICConfigurationInfo {
     (Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_NetworkAdapterConfiguration' -Filter 'IPEnabled = 1') | ForEach-Object {
         $_.IPAddress | ForEach-Object {
-            #TODO: log NIC name/description/servicename as well
+            #TODO: log NIC name/description/ServiceName as well
             if($null -ne $_) {
                 if($_.IndexOf('.') -gt 0 -and !$_.StartsWith('169.254') -and $_ -ne '0.0.0.0') {
                     if($TSvars.ContainsKey('zTS_IPAddress')) {
@@ -296,11 +296,11 @@ Function Get-NICConfigurationInfo {
     }
 }
 Function Get-NICEthernetConnectionInfo {
-    #.Synopsis Determine if connected by wired Etherenet
+    #.Synopsis Determine if connected by wired Ethernet
     #https://weblogs.sqlteam.com/mladenp/2010/11/04/find-only-physical-network-adapters-with-wmi-win32_networkadapter-class/
     #https://stackoverflow.com/questions/10114455/determine-network-adapter-type-via-wmi
     #http://blogs.technet.com/b/heyscriptingguy/archive/2014/01/12/weekend-scripter-use-powershell-to-identify-network-adapter-characteristics.aspx#comments
-    $WiredNICNames = @((Get-WmiObject -Namespace 'root\WMI' -Class 'MSNdis_PhysicalMediumType' -Filter 'NdisPhysicalMediumType = 0 and Active = "true"' -Property InstanceName | Where-Object { $_.InstanceName -notmatch 'RAS|ISATAP|Teredo|6to4' }).InstanceName)
+    $WiredNICNames = @((Get-WmiObject -Namespace 'root\WMI' -Class 'MSNdis_PhysicalMediumType' -Filter 'NdisPhysicalMediumType = 0 and Active = "true"' -Property InstanceName | Where-Object { $_.InstanceName -NotMatch 'RAS|ISATAP|Teredo|6to4' }).InstanceName)
     Write-LogMessage -Message "Wired NIC Names: $($WiredNICNames -join '; ')"
     Set-Var -Name 'zTS_NICs_Wired' -Value $($WiredNICNames -join '; ')
     $IPEnabledNICs = @(Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter 'IPEnabled="True"' | Select-Object Description, Caption, ServiceName, MACAddress) #IPAddress
@@ -312,9 +312,9 @@ Function Get-NICEthernetConnectionInfo {
     $NetAdapters = @(Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_NetworkAdapter' -Filter 'NetConnectionStatus = 2 and AdapterType = "Ethernet 802.3" and Availability = 3 and Installed = "true" and NetEnabled = "true"')
     Write-LogMessage -Message "All Ethernet Adapters: $($NetAdapters.Name -join '; ')"
     Set-Var -Name 'zTS_NICs_Ethernet' -Value $($NetAdapters.Name -join '; ')
-    $NetAdapters = $NetAdapters | Where-Object { $_.Description -notlike '*VMware*' -and $_.Description -notlike '*vmxnet*'-and $_.Description -notlike '*wireless*' -and $_.Description -notlike '*WiFi*' -and $_.Description -notlike '*bluetooth*' -and $_.Description -notlike '* wimax *' -and $_.Description -notlike '*wan *'}
-    #-and $_.Caption -notlike '*wireless*' -and $_.Description -notlike '*wireless*' -and $_.ProductName -notlike '*wireless*' -and $_.Name -notlike '*wireless*' -and $_.NetConnectionID -notlike '*wireless*' -and $_.NetConnectionID -notlike '*WiFi*' -and $_.NetConnectionID -notlike '*Wi-Fi*' -and $_.Name -notlike '*bluetooth*' -and $_.Name -notlike '* wimax *' -and $_.Name -notlike '*wan *'}
-    #$NetAdapters = $NetAdapters | Where-Object { $_.Description -notmatch 'VMware|vmxnet' -and $_.Caption -notmatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.Description -notmatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.ProductName -notmatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.Name -notmatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.NetConnectionID -notmatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan'}
+    $NetAdapters = $NetAdapters | Where-Object { $_.Description -NotLike '*VMware*' -and $_.Description -NotLike '*vmxnet*' -and $_.Description -NotLike '*wireless*' -and $_.Description -NotLike '*WiFi*' -and $_.Description -NotLike '*bluetooth*' -and $_.Description -NotLike '* wimax *' -and $_.Description -NotLike '*wan *' }
+    #-and $_.Caption -NotLike '*wireless*' -and $_.Description -NotLike '*wireless*' -and $_.ProductName -NotLike '*wireless*' -and $_.Name -NotLike '*wireless*' -and $_.NetConnectionID -NotLike '*wireless*' -and $_.NetConnectionID -NotLike '*WiFi*' -and $_.NetConnectionID -NotLike '*Wi-Fi*' -and $_.Name -NotLike '*bluetooth*' -and $_.Name -NotLike '* wimax *' -and $_.Name -NotLike '*wan *'}
+    #$NetAdapters = $NetAdapters | Where-Object { $_.Description -NotMatch 'VMware|vmxnet' -and $_.Caption -NotMatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.Description -NotMatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.ProductName -NotMatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.Name -NotMatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan' -and $_.NetConnectionID -NotMatch 'wireless|WiFi|Wi-Fi|bluetooth|wimax|wan'}
     Write-LogMessage -Message "non-Excluded Ethernet Adapters: $($NetAdapters.Name -join '; ')"
     Set-Var -Name 'zTS_NICs_Ethernet_nonExcluded' -Value $($NetAdapters.Name -join '; ')
 
@@ -397,33 +397,33 @@ Function Get-ProcessorInfo {
 }
 Function Get-BitLockerInfo {
     $IsBDE = $false
-    $BitlockerEncryptionType = 'N/A'
-    $BitlockerEncryptionMethod = 'N/A'
+    $BitLockerEncryptionType = 'N/A'
+    $BitLockerEncryptionMethod = 'N/A'
     try {
         $EncVols = Get-WmiObject -Namespace 'root\CIMv2\Security\MicrosoftVolumeEncryption' -Class 'Win32_EncryptableVolume' -ErrorAction Stop
     } catch {
-        If ((Test-Path -Path "$env:WinDir\system32\wbem\win32_encryptablevolume.mof" -PathType Leaf) -and (Test-Path -Path "$env:WinDir\mofcomp.exe" -PathType Leaf)) {
-            mofcomp.exe c:\windows\system32\wbem\win32_encryptablevolume.mof
+        If ((Test-Path -Path "$env:WinDir\system32\wbem\win32_EncryptableVolume.mof" -PathType Leaf) -and (Test-Path -Path "$env:WinDir\mofcomp.exe" -PathType Leaf)) {
+            mofcomp.exe c:\windows\system32\wbem\win32_EncryptableVolume.mof
             $EncVols = Get-WmiObject -Namespace 'root\CIMv2\Security\MicrosoftVolumeEncryption' -Class 'Win32_EncryptableVolume' -ErrorAction SilentlyContinue
         }
     }
     If ($EncVols) {
-        If ($EncVols | Where-Object { $_.Driveletter -eq 'c:' -and $_.protectionstatus -eq '1'}) { Set-Var -Name 'OSDBitLockerStatus' -Value 'Protected' }
+        If ($EncVols | Where-Object { $_.DriveLetter -eq 'c:' -and $_.ProtectionStatus -eq '1'}) { Set-Var -Name 'OSDBitLockerStatus' -Value 'Protected' }
         foreach ($EncVol in $EncVols) {
             if($EncVol.ProtectionStatus -ne 0) {
                 $EncMethod = [int]$EncVol.GetEncryptionMethod().EncryptionMethod
                 if ($EncryptionMethods.ContainsKey($EncMethod)) {
-                    $BitlockerEncryptionMethod = $EncryptionMethods[$EncMethod]
+                    $BitLockerEncryptionMethod = $EncryptionMethods[$EncMethod]
                 }
                 $Status = $EncVol.GetConversionStatus(0)
                 if ($Status.ReturnValue -eq 0) {
                     if ($Status.EncryptionFlags -eq 0x00000001) {
-                        $BitlockerEncryptionType = 'Used Space Only Encrypted'
+                        $BitLockerEncryptionType = 'Used Space Only Encrypted'
                     } else {
-                        $BitlockerEncryptionType = 'Full Disk Encryption'
+                        $BitLockerEncryptionType = 'Full Disk Encryption'
                     }
                 } else {
-                    $BitlockerEncryptionType = 'Unknown'
+                    $BitLockerEncryptionType = 'Unknown'
                 }
                 $IsBDE = $true
             }
@@ -431,8 +431,8 @@ Function Get-BitLockerInfo {
     }
     Set-Var -Name 'zTS_IsBDE' -Value $IsBDE.ToString() -Alias 'IsBDE'
 	Set-Var -Name 'zTS_BitLockerIsEnabled' -Value $IsBDE.ToString()
-    Set-Var -Name 'zTS_BitlockerEncryptionMethod' -Value $BitlockerEncryptionMethod -Alias 'BitlockerEncryptionMethod'
-    Set-Var -Name 'zTS_BitlockerEncryptionType' -Value $BitlockerEncryptionType -Alias 'BitlockerEncryptionType'
+    Set-Var -Name 'zTS_BitLockerEncryptionMethod' -Value $BitLockerEncryptionMethod -Alias 'BitLockerEncryptionMethod'
+    Set-Var -Name 'zTS_BitLockerEncryptionType' -Value $BitLockerEncryptionType -Alias 'BitLockerEncryptionType'
 }
 Function Get-LoggedOnUser {
     #.Link https://garytown.com/gather-user-account-name-during-ipu
@@ -447,15 +447,15 @@ Function Get-LoggedOnUser {
             $regexa = '.+Domain="(.+)",Name="(.+)"$'
             $regexd = '.+LogonId="(\d+)"$'
             $logon_sessions = @(Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_LogonSession')# -Property LogonId,LogonType,AuthenticationPackage)
-            $logon_users = @(Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_LoggedonUser')# -Property antecedent,dependent)
+            $logon_users = @(Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_LoggedOnUser')# -Property antecedent,dependent)
             $session_user = @{}
             $logon_users | ForEach-Object { $_.antecedent -match $regexa > $nul ;$username = $matches[2] ;$_.dependent -match $regexd > $nul ;$session = $matches[1] ;$session_user[$session] += $username }
             $currentUser = $logon_sessions | ForEach-Object {
-                $loggedonuser = New-Object -TypeName psobject
-                $loggedonuser | Add-Member -MemberType NoteProperty -Name 'User' -Value $session_user[$_.LogonId]
-                $loggedonuser | Add-Member -MemberType NoteProperty -Name 'Type' -Value $_.LogonType
-                $loggedonuser | Add-Member -MemberType NoteProperty -Name 'Auth' -Value $_.AuthenticationPackage
-                ($loggedonuser  | Where-Object {$_.Type -eq '2' -and $_.Auth -eq 'Kerberos'}).User
+                $LoggedOnUser = New-Object -TypeName PSObject
+                $LoggedOnUser | Add-Member -MemberType NoteProperty -Name 'User' -Value $session_user[$_.LogonId]
+                $LoggedOnUser | Add-Member -MemberType NoteProperty -Name 'Type' -Value $_.LogonType
+                $LoggedOnUser | Add-Member -MemberType NoteProperty -Name 'Auth' -Value $_.AuthenticationPackage
+                ($LoggedOnUser | Where-Object { $_.Type -eq '2' -and $_.Auth -eq 'Kerberos' }).User
             }
             $currentUser = $currentUser | Select-Object -Unique
             Set-Var -Name 'zTS_LoggedOnUserAccount' -Value $CurrentUser
@@ -516,8 +516,8 @@ Function Get-LogicalDiskInfo {
         Set-Var -Name "zTS_LogicalDisk_$($Drive)_Compressed" -Value $Disk.Compressed
         If ($Disk.DeviceID -eq $OSInfo.SystemDrive) {
             Set-Var -Name "zTS_LogicalDisk_$($Drive)_ContainsWindows" -Value $true
-            Set-Var -Name 'zTS_OSDrive_FreespaceGB' -Value $([math]::Round($Disk.Freespace / 1024 / 1024 / 1024, 0))
-            Set-Var -Name 'zTS_OSDrive_FreespaceForWaaS' -Value $(If ($Disk.Freespace -gt 20000000000) { $true } else { $false })
+            Set-Var -Name 'zTS_OSDrive_FreeSpaceGB' -Value $([math]::Round($Disk.FreeSpace / 1024 / 1024 / 1024, 0))
+            Set-Var -Name 'zTS_OSDrive_FreeSpaceForWaaS' -Value $(If ($Disk.FreeSpace -gt 20000000000) { $true } else { $false })
         }
     }
 }
@@ -551,7 +551,7 @@ Function Get-LanguageAndRegion {
     #Set-Var -Name 'zTS_SystemLocaleDescription' -Value "$($Info.LCID); $($Info.Name); $($Info.DisplayName)"
     #Set-Var -Name 'zTS_SystemLocaleName' -Value $Info.Name
     try {
-        #$Info = [cultureinfo]::CurrentCulture
+        #$Info = [CultureInfo]::CurrentCulture
         #Set-Var -Name 'zTS_SystemLocaleDescription' -Value "$($Info.LCID); $($Info.Name); $($Info.DisplayName)"
         #Set-Var -Name 'zTS_SystemLocaleName' -Value $Info.Name
     } catch {}
@@ -714,14 +714,14 @@ $OutputVars = @('zTS_StartTimestamp','zTS_Hostname','zTS_ComputerName','zTS_OSDC
  ,'zTS_BIOSAssetTag','zTS_BIOSType','zTS_UEFISecureBootEnabled','zTS_EthernetConnected','zTS_IPAddresses','zTS_DefaultGateway','zTS_IPSubnet','zTS_ComputerMemoryMB'`
  ,'zTS_ACPowerIsOn','zTS_BatteryIsOn','zTS_OSName','zTS_OSVersion','zTS_OSBuild','zTS_OSArchitecture','zTS_OSRegisteredOrganization','zTS_OSRegisteredUser','zTS_OSInstallDate','zTS_OSInstallDatestamp'`
  ,'zTS_OSLastBootUpTime','zTS_OSLastBootUpTimestamp','zTS_OSSKU','zTS_OSType','zTS_OSProductSuite','zTS_OSProductType','zTS_OSBootDevice','zTS_OSSystemDevice','zTS_OSSystemDirectory','zTS_OSSystemDrive'`
- ,'zTS_OSBuildType','zTS_OSLacale','zTS_OSLanguage','zTS_OSCurrentTimeZone','zTS_TimezoneName','zTS_TimezoneID','zTS_TimezoneUTCOffset','zTS_DriveC_FreespaceForWaaS','zTS_DriveC_FreespaceGB','zTS_Disk0_Size'`
+ ,'zTS_OSBuildType','zTS_OSLocale','zTS_OSLanguage','zTS_OSCurrentTimeZone','zTS_TimezoneName','zTS_TimezoneID','zTS_TimezoneUTCOffset','zTS_DriveC_FreeSpaceForWaaS','zTS_DriveC_FreeSpaceGB','zTS_Disk0_Size'`
  ,'zTS_Disk0_FirmwareRevision','zTS_Disk0_Model','zTS_Disk0_SerialNumber','zTS_DiskPartitionCount','zTS_LogicalDiskCount','zTS_FixedDriveCount','zTS_ProcArchitecture'`
  ,'zTS_ProcessorCount','zTS_ProcessorSpeed','zTS_TPMIsActivated','zTS_TPMIsEnabled','zTS_TPMIsOwned','zTS_PowerShellVersion')
 #TODO....
 # https://docs.microsoft.com/en-us/powershell/scripting/samples/collecting-information-about-computers?view=powershell-5.1
 # https://gallery.technet.microsoft.com/scriptcenter/ShowUI-showset-registered-7ad72ce0
 #OS Configuration:          Member Server
-#Domain:                    Contoso.com                                 HKLM:SYSTEM\CurrentControlSet\Services\Tcpip\Parameters, NV Domain
+#Domain:                    Contoso.com                                 HKLM:SYSTEM\CurrentControlSet\Services\TCPIP\Parameters, NV Domain
 #Logon Server:              \\VMFPPDC01                                 $env:LogonServer
 
 $SystemInfoLocalFile = Join-Path -Path $env:SystemRoot -ChildPath 'Logs\SystemInfo.txt'

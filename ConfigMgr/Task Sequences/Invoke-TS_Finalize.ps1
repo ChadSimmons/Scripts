@@ -61,11 +61,11 @@ If ($TSenv) {
                 Set-Var -Name 'zTS_FinalReturnCode' -Value '0' -Force
             }
         }
-        #TODO: consider this... but does not fit in variable management model... Set before updating zTS_LogsFinalPath... 
+        #TODO: consider this... but does not fit in variable management model... Set before updating zTS_LogsFinalPath...
         #try { $TSenv.Value('zTS_FinalStatus') = $TSvars['zTS_FinalStatus'] } catch {}
         #Set-Var -Name 'zTS_LogsFinalPath' -Value "$($TSenv.Value('zTS_TSType'))-$($TSenv.Value('_SMSTSPackageID'))-$($TSenv.Value('zTS_FinalStatus'))" -Force
         Set-Var -Name 'zTS_LogsFinalPath' -Value "$($TSenv.Value('zTS_TSType'))-$($TSenv.Value('_SMSTSPackageID'))-$($TSvars['zTS_FinalStatus'])" -Force
-    } catch { 
+    } catch {
         Write-Warning -Message 'Could not set Task Sequence variable(s).'
     }
 } Else {
@@ -123,7 +123,7 @@ If ($TSenv) {
         New-ItemProperty -Path $RegPath -Name 'StartTimestamp' -Value $TSenv.Value('zTS_StartTimestamp') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
         New-ItemProperty -Path $RegPath -Name 'TSVersion' -Value $TSenv.Value('zTS_TSVersion') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
         New-ItemProperty -Path $RegPath -Name 'TSType' -Value $TSenv.Value('zTS_TSType') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
-        New-ItemProperty -Path $RegPath -Name 'FinalStatus' -Value $TSenv.Value('zTS_FinalSatus') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
+        New-ItemProperty -Path $RegPath -Name 'FinalStatus' -Value $TSenv.Value('zTS_FinalStatus') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
         #New-ItemProperty -Path $RegPath -Name '_SMSTSLastActionName' -Value $TSenv.Value('_SMSTSLastActionName') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
         #New-ItemProperty -Path $RegPath -Name '_SMSTSLastActionSucceeded' -Value $TSenv.Value('_SMSTSLastActionSucceeded') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
         #New-ItemProperty -Path $RegPath -Name '_SMSTSLastActionRetCode' -Value $TSenv.Value('_SMSTSLastActionRetCode') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null

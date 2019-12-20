@@ -486,7 +486,7 @@ Function GatherLogs( [string]$CustomInventoryFile) {
 	$CCMCacheSize = 0
 	$CCMCache = ForEach ($i in $colItems) {
 		$subFolderItems = (Get-ChildItem $i.FullName -Recurse | Where-Object { $_.PSIsContainer -eq $false } | Measure-Object -property length -sum).sum
-		#$CCMCachSize=$CCMCachSize+"{0:N2}" -f ($subFolderItems / 1MB)
+		#$CCMCacheSize=$CCMCacheSize+"{0:N2}" -f ($subFolderItems / 1MB)
 		$CCMCacheSize += $subFolderItems
 		$props = @{
 			GB            = "{0:N2}" -f ($subFolderItems / 1GB)
@@ -597,7 +597,7 @@ $stdout | Out-File -FilePath "$TempPath\SystemInfo.txt" -Force
 GatherLogs -CustomInventoryFile "$TempPath\CustomInventory.txt"
 
 #Get Windows Reliability Records
-$WRR = Get-WmiObject -Class 'Win32_ReliabilityRecords' | Select-Object ComputerName, EventIdentifier, InsertionStrings, Logfile, Message, ProductName, RecordNumber, SourceName, @{N="TimeGenerated"; E={$_.ConvertToDatetime($_.TimeGenerated)}}, User
+$WRR = Get-WmiObject -Class 'Win32_ReliabilityRecords' | Select-Object ComputerName, EventIdentifier, InsertionStrings, LogFile, Message, ProductName, RecordNumber, SourceName, @{N="TimeGenerated"; E={$_.ConvertToDatetime($_.TimeGenerated)}}, User
 $WRR | Export-Csv -Path "$TempPath\Windows Reliability Records.csv" -NoTypeInformation
 
 #Get Installed MS Patches
@@ -689,7 +689,7 @@ $LogPaths | ForEach-Object {
 
 #get MS System Information ... DISABLED due to long execution time
 #Write-LogMessage -Message "Running MSInfo32.exe"
-#$rc = Start-Process -Wait -NoNewWindow -RedirectStandardOutput "$TempPath\MSInfo32.StdOut" -RedirectStandardError "$TempPath\MSInfo32.StdErr" -FilePath "$env:WinDir\System32\msinfo32.exe" -ArgumentList '/report', "$TempPath\MSInfo32.txt" # -Wait
+#$rc = Start-Process -Wait -NoNewWindow -RedirectStandardOutput "$TempPath\MSInfo32.StdOut" -RedirectStandardError "$TempPath\MSInfo32.StdErr" -FilePath "$env:WinDir\System32\MSInfo32.exe" -ArgumentList '/report', "$TempPath\MSInfo32.txt" # -Wait
 
 
 #Compress the temporary folder
@@ -729,7 +729,7 @@ If ($CompressArchiveSuccess -eq $true) {
 If ([string]::IsNullOrEmpty($LogServer)) {
 	Write-LogMessage -Message "Setting the server upload path to the ConfigMgr Management Point"
 	try {
-		#$ConfigMgrMP = (Get-CIMinstance -Namespace 'root\ccm\LocationServices' -ClassName sms_mpinformation).MP[0]
+		#$ConfigMgrMP = (Get-CIMinstance -Namespace 'root\ccm\LocationServices' -ClassName SMS_MPInformation).MP[0]
 		$LogServer = (Get-WmiObject -Namespace 'root\CCM\LocationServices' -Class 'SMS_MPInformation' -Property 'MP').MP[0]
 	} catch {
 		Write-LogMessage -Message "Failed to retrieve ConfigMgr Management Point [$LogServer]." -Type Error -Console

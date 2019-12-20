@@ -1,13 +1,13 @@
 @echo off
 setlocal
-set myCompany=FHLB Dallas
-set myDomain=FHLB.com
-set myForest=FHLB.com
-set myDCserver=PEGASUS
-set myCMServer=BOURNE
-set mySQLServer=BOURNE
+set myCompany=Contoso
+set myDomain=contoso.com
+set myForest=contoso.com
+set myDCserver=DC1
+set myCMServer=CM1
+set mySQLServer=SQL1
 set myUserName=ConfigMgr Admin
-set mySaveDir=U:\MyDocs\ConfigMgr Documentation
+set mySaveDir=%UserProfile%\Documents\ConfigMgr Documentation
 
 If /I [%1]==[/?] goto:Help
 If /I [%1]==[-?] goto:Help

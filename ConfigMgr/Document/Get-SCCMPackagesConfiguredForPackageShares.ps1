@@ -13,7 +13,7 @@
 
 #Load Configuration Manager PowerShell Module
 #.Link http://blogs.technet.com/b/configmgrdogs/archive/2015/01/05/powershell-ise-add-on-to-connect-to-configmgr-connect-configmgr.aspx
-If ($Env:SMS_ADMIN_UI_PATH -ne $null) {
+If ($null -ne $Env:SMS_ADMIN_UI_PATH) {
 	Try {
 		Write-Host "Importing ConfigMgr PowerShell Module..."
 		Import-Module ((Split-Path $env:SMS_ADMIN_UI_PATH)+"\ConfigurationManager.psd1")
@@ -21,7 +21,7 @@ If ($Env:SMS_ADMIN_UI_PATH -ne $null) {
 		## Another method ## Import-module ($Env:SMS_ADMIN_UI_PATH.Substring(0,$Env:SMS_ADMIN_UI_PATH.Length-5) + '\ConfigurationManager.psd1')
 		Write-Host "Executed `"Import-module `'((Split-Path $env:SMS_ADMIN_UI_PATH)+"\ConfigurationManager.psd1")`'`""
         $SiteCode = (Get-PSDrive -PSProvider CMSITE).Name
-		Push-Location "$($SiteCode):\" 
+		Push-Location "$($SiteCode):\"
 		#Dir
 		Pop-Location
         Write-Host "Detected ConfigMgr Site of $SiteCode.  Execute the command 'CD $($SiteCode):\' before running any ConfigMgr cmdlet" -ForegroundColor Green
@@ -31,6 +31,6 @@ If ($Env:SMS_ADMIN_UI_PATH -ne $null) {
 }
 
 
-$Packages = Get-CMPackage | Where { $_.pkgflags -eq ($_.pkgflags -bor 0x80) } #80 hex is 128 decimal
-$Packages | Select PackageID, Manufacturer, Name, Version, LastRefreshTime, PackageSize, PkgFlags, ShareName
+$Packages = Get-CMPackage | Where-Object { $_.pkgflags -eq ($_.pkgflags -bor 0x80) } #80 hex is 128 decimal
+$Packages | Select-Object PackageID, Manufacturer, Name, Version, LastRefreshTime, PackageSize, PkgFlags, ShareName
 

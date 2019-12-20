@@ -131,7 +131,7 @@ If (-not($Quiet)) {
 #    New-ItemProperty -Path $RegPath -Name 'StartTimestamp' -Value $TSenv.Value('zTS_StartTimestamp') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
 #    New-ItemProperty -Path $RegPath -Name 'TSVersion' -Value $TSenv.Value('zTS_TSVersion') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
 #    New-ItemProperty -Path $RegPath -Name 'TSType' -Value $TSenv.Value('zTS_TSType') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
-#    New-ItemProperty -Path $RegPath -Name 'FinalStatus' -Value $TSenv.Value('zTS_FinalSatus') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
+#    New-ItemProperty -Path $RegPath -Name 'FinalStatus' -Value $TSenv.Value('zTS_FinalStatus') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
 #    #New-ItemProperty -Path $RegPath -Name '_SMSTSLastActionName' -Value $TSenv.Value('_SMSTSLastActionName') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
 #    #New-ItemProperty -Path $RegPath -Name '_SMSTSLastActionSucceeded' -Value $TSenv.Value('_SMSTSLastActionSucceeded') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null
 #    #New-ItemProperty -Path $RegPath -Name '_SMSTSLastActionRetCode' -Value $TSenv.Value('_SMSTSLastActionRetCode') -PropertyType String -Force -ErrorAction SilentlyContinue | out-null

@@ -4,8 +4,8 @@
 #   Run a ConfigMgr Package/Program given a Package Name and Version
 #.DESCRIPTION
 #   Execute a deployed Package/Program on a remote computer(s) given the Package Name and Version.
-#	 This assumes there is only one Deployment know to the reomte computer for the given the Package Name and Version.
-#	 The script requires administrative rigths on the remote computer(s)
+#	 This assumes there is only one Deployment know to the remote computer for the given the Package Name and Version.
+#	 The script requires administrative rights on the remote computer(s)
 #.PARAMETER Computer
 #   Computer Name (NetBIOS, IPAddress, or FQDN/Fully Qualified Domain Name) of the remote computer(s) to execute against
 #.PARAMETER PackageName
@@ -56,7 +56,7 @@ $PackageVersion = '1.0'
 $ProgramName = 'Run CMTrace Log Tool' #'Configuration Manager Client Upgrade Program'
 #>
 
-Function Get-SCCMSecheduleID {
+Function Get-SCCMScheduleID {
 	#.Synopsis
 	#	Find a ConfigMgr deployment for a specified PackageName
 	Param (
@@ -70,7 +70,7 @@ Function Get-SCCMSecheduleID {
 		$Package = get-wmiobject -Computer $ComputerName -query "SELECT PKG_PackageID, PKG_Version, ADV_AdvertisementID, PKG_SourceVersion, PRG_CommandLine, PKG_Name, PRG_ProgramID FROM CCM_SoftwareDistribution Where PKG_Name='$PackageName'" -namespace "root\ccm\policy\machine\actualconfig"
 	}
 	If ($VerbosePreference -eq 'Continue') {
-		If ($Package -ne $Null) {
+		If ($null -ne $Package) {
 			$PackageDetails = @{}
 			$PackageDetails.Add('Computer Name', $ComputerName)
 			$PackageDetails.Add('Package Name', $Package.PKG_Name)
@@ -89,8 +89,8 @@ Function Get-SCCMSecheduleID {
 }
 
 ForEach ($ComputerName in $Computer) {
-	$ScheduledMessageID = Get-SCCMSecheduleID -ComputerName $ComputerName -PackageName $PackageName -PackageVersion $PackageVersion
-	If ($ScheduledMessageID -ne $Null) {
+	$ScheduledMessageID = Get-SCCMScheduleID -ComputerName $ComputerName -PackageName $PackageName -PackageVersion $PackageVersion
+	If ($null -ne $ScheduledMessageID) {
 		Write-Verbose "On $ComputerName, ScheduledMessageID is $ScheduledMessageID"
 		Try {
 			Invoke-CimMethod -Computer $Computer -Namespace 'ROOT\ccm' -ClassName 'SMS_Client' -MethodName TriggerSchedule -Arguments @{sScheduleID=$ScheduledMessageID}

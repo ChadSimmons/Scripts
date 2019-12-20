@@ -10,10 +10,10 @@ $PackageIDs | Get-Member
 If ($PackageIDs.count -gt 50 -and $AllPackages.count -eq 0) { $AllPackages = Get-CMPackage }
 
 ForEach ($Package in $PackageIDs) {
-    If ($AllPackages.count -le 1) { 
+    If ($AllPackages.count -le 1) {
             $AllPackages = Get-CMPackage -ID $Package.PackageID
     }
-    $CurrentPackage = ($AllPackages | Where { $_.PackageID -eq $Package.PackageID })
+    $CurrentPackage = ($AllPackages | Where-Object { $_.PackageID -eq $Package.PackageID })
     $Package.PackageSize = ($CurrentPackage).PackageSize
     $Package.PackageFullName = ($CurrentPackage).Manufacturer
     $Package.PackageFullName = $Package.PackageFullName+" "+($CurrentPackage).Name

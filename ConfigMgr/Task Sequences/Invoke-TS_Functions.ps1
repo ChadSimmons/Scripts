@@ -51,7 +51,7 @@ Function Set-Var {
     If ([string]::IsNullOrEmpty($Value)) { $Value = '' }
     #Combine the variable Name and Aliases into a single array
     $Names = @(); $Names += $Name; If (-not([string]::IsNullOrEmpty($Alias) -or $Alias.count -eq 0)) { $Names += $Alias }
-    
+
     Write-Verbose -Message "Setting Variable [$Name] to [$Value]$(If ($Alias) { " and creating alias for [$($Alias -join ',')]"})"
     ForEach ($Name in $Names) {
         If ($TSvars.ContainsKey($Name)) {
@@ -90,7 +90,7 @@ Function Copy-HashtableToTSEnv ($Hashtable) {
 	}
 }
 Function Stop-Script {
-	Write-Message -Message "Script completed in $($(New-Timespan -Start $ScriptStartTime -End $(Get-Date)).Totalseconds) seconds at $(Get-Date)"
+	Write-Message -Message "Script completed in $($(New-TimeSpan -Start $ScriptStartTime -End $(Get-Date)).TotalSeconds) seconds at $(Get-Date)"
 	Write-Message -Message "========== Completed script [$global:ScriptFile] =========="
 	Pop-Location
 }

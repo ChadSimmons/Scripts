@@ -12,7 +12,7 @@ $files = Get-ChildItem -Path $PathRoot -File
 ForEach ($file in $files) {
     $i++; $isDay = $false
     Write-Progress -Activity 'Moving files based on name as date' -Status "File $i of $($files.Count)"
-    
+
     #check for a file name like yyyyMMdd_*.*
     $Day = ($file.BaseName -split '_')[0]
     If ($isDay -eq $false -and $Day -gt 19000000 -and $Day -le (Get-Date -Format yyyyMMdd)) {
@@ -34,7 +34,6 @@ ForEach ($file in $files) {
     If ($isDay -eq $false) {
         #check for a file name like PHOTO_yyyyMMdd_*.*
 
-        file:///C:/Users/chsimmons/OneDrive/Chad-Work/Regular%20Expressions%20cheat%20sheet.pdf
         ($file.BaseName -match '^PHOTO_[1-2][0|9]\d\d\d\d\d\d_*')
 
         $Day = ($file.BaseName -split '_')[1]

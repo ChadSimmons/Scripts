@@ -16,7 +16,7 @@
 #   This script is maintained at https: //github.com/ChadSimmons/Scripts
 #   Additional information about the function or script.
 #   ========== Change Log History ==========
-#   - 2018/09/25 by Chad.Simmons@CatapultSystems.com - updaed ValidatePattern and IncludeFolders
+#   - 2018/09/25 by Chad.Simmons@CatapultSystems.com - updated ValidatePattern and IncludeFolders
 #   - 2016/12/21 by Chad.Simmons@CatapultSystems.com - Created
 #   - 2016/12/21 by Chad@ChadsTech.net - Created
 ################################################################################
