@@ -62,8 +62,8 @@
 #   - 2017/12/27 by Chad.Simmons@CatapultSystems.com - Created
 #   - 2017/12/27 by Chad@ChadsTech.net - Created
 #   ========== Additional References and Reading ==========
-#   - based loosley on the PowerShell Application Deployment Toolkit: http://psappdeploytoolkit.com
-#   - based loosley on Mick Pletcher's PowerShell Deployment Module: http://mickitblog.blogspot.com/2014/12/powershell-deployment-module.html
+#   - based loosely on the PowerShell Application Deployment Toolkit: http://psappdeploytoolkit.com
+#   - based loosely on Mick Pletcher's PowerShell Deployment Module: http://mickitblog.blogspot.com/2014/12/powershell-deployment-module.html
 #   === To Do / Proposed Changes ===
 #   - TODO: Convert to a PowerShell script module
 #         - http://mikefrobbins.com/2013/07/04/how-to-create-powershell-script-modules-and-module-manifests/

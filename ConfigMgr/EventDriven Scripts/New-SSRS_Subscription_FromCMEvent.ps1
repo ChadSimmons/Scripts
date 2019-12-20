@@ -2,7 +2,7 @@
 #   New-SSRS_Subscription_FromCMEvent.ps1
 #.Example
 #   From a ConfigMgr Status Message Filter Rule
-#   "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.FHLB.com -SiteServer %sitesvr -SiteCode %sc -DeploymentID "%msgis01 %msgis02 %msgis03 %msgis04 %msgis05 %msgis06" -MessageID %msgid
+#   "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.Contoso.com -SiteServer %sitesvr -SiteCode %sc -DeploymentID "%msgis01 %msgis02 %msgis03 %msgis04 %msgis05 %msgis06" -MessageID %msgid
 #.Example
 #   PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File New-SSRS_Subscription_FromCMEvent.ps1 -DeploymentID DAL20017 -MessageID 30006
 #.Example
@@ -53,7 +53,7 @@ Function Get-ScriptPath {
 	#.Synopsis
 	#   Get the folder of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	#   2017/07/25 by Chad@chadstech.net
 	try {
 		$script:ScriptPath = Split-Path -Path $((Get-Variable MyInvocation -Scope 1 -ErrorAction SilentlyContinue).Value).MyCommand.Path -Parent
@@ -68,7 +68,7 @@ Function Get-ScriptPath {
 Function Get-ScriptName {
 	#.Synopsis  Get the name of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	#   2017/07/25 by Chad@chadstech.net
 
 	If ($psISE) {
@@ -122,9 +122,9 @@ Function Write-CMEvent {
 		{ @('2', 'Warn', 'Warning') -contains $_ } { $intType = 2 } #2 = Warning (yellow)
         Default { $intType = 1 } #1 = Normal
 	}
-	If ($Component -eq $null) {$Component = ' '} #Must not be null
+    If ($null -eq $Component) { $Component = ' ' } #Must not be null
 	try { #write log file message
-		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
+		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$intType`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 	} catch { Write-Error "Failed to write to the log file '$LogFile'" }
 	If ($Console) { Write-Output $Message } #write to console if enabled
 }; Set-Alias -Name 'Write-LogMessage' -Value 'Write-CMEvent' -Description 'Log a message in CMTrace format'
@@ -193,15 +193,15 @@ Switch ($MessageID) {
         #Message ID: 30226
         #Source: SMS Provider
         #Severity: Informational
-        #Run a Program: "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.FHLB.com -SiteServer %sitesvr -SiteCode %sc -MessageID %msgid -DeploymentID "ApplicationName:%msgis01 CollectionID:%msgis02"
+        #Run a Program: "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.Contoso.com -SiteServer %sitesvr -SiteCode %sc -MessageID %msgid -DeploymentID "ApplicationName:%msgis01 CollectionID:%msgis02"
         #=== Status Message Info ===
-        #Description: User "FHLB\ConfigMgrSU" created a deployment of application "Power BI Desktop" to collection "NULL".
-        #Properties: User Name : FHLB\ConfigMgrSU
+        #Description: User "Contoso\ConfigMgrSU" created a deployment of application "Power BI Desktop" to collection "NULL".
+        #Properties: User Name : Contoso\ConfigMgrSU
         #=== Example Parameters ===
         #-DeploymentID "ApplicationName:Power BI Desktop CollectionName:NULL"
 
-        $ApplicationName = $($DeploymentID -Split ' CollectionName:' | Select -First 1) -Split 'ApplicationName:' | Select -Last 1
-        $CollectionName = $DeploymentID -Split ' CollectionName:' | Select -Last 1
+        $ApplicationName = $($DeploymentID -Split ' CollectionName:' | Select-Object -First 1) -Split 'ApplicationName:' | Select-Object -Last 1
+        $CollectionName = $DeploymentID -Split ' CollectionName:' | Select-Object -Last 1
         $Deployment = (Get-WmiObject -ComputerName $SiteServer -Namespace "root\SMS\Site_$SiteCode" -Query "SELECT AssignmentID FROM SMS_ApplicationAssignment WHERE AssignmentType=2 and ApplicationName='$ApplicationName' and CollectionName='$CollectionName'")
         $CommonParams.Add('AdvertisementID',$Deployment.AssignmentID)
 
@@ -228,10 +228,10 @@ Switch ($MessageID) {
         #Component: Microsoft.ConfigurationManagement.exe
         #Message Type: Audit
         #Message ID: 30006
-        #Run a Program: "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.FHLB.com -SiteServer %sitesvr -SiteCode %sc -MessageID %msgid -DeploymentID %msgis02
+        #Run a Program: "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.Contoso.com -SiteServer %sitesvr -SiteCode %sc -MessageID %msgid -DeploymentID %msgis02
         #=== Status Message Info ===
-        #Description: User "FHLB\ConfigMgrSU" created a deployment of application "Power BI Desktop" to collection "NULL".
-        #Properties: User Name : FHLB\ConfigMgrSU
+        #Description: User "Contoso\ConfigMgrSU" created a deployment of application "Power BI Desktop" to collection "NULL".
+        #Properties: User Name : Contoso\ConfigMgrSU
         #=== Example Parameters ===
         #-DeploymentID DAL2002B
 
@@ -260,9 +260,9 @@ Switch ($MessageID) {
     30196 { # User Created a Software Update Group Deployment
         #NOTE: Message ID 5800 runs after 30196, thus this is really a duplicate
 
-        #Message ID 30196, Component Microsoft.ConfigurationManagement.exe, System BOURNE.fhlb.com, Type Audit, Source SMS Provider, Severity Information,
-        #User "FHLB\ConfigMgrSU" created updates assignment 16777484 ({8969F490-87C5-489C-9D13-4850E3D84F80}).
-        #User Name : FHLB\ConfigMgrSU
+        #Message ID 30196, Component Microsoft.ConfigurationManagement.exe, System BOURNE.Contoso.com, Type Audit, Source SMS Provider, Severity Information,
+        #User "Contoso\ConfigMgrSU" created updates assignment 16777484 ({8969F490-87C5-489C-9D13-4850E3D84F80}).
+        #User Name : Contoso\ConfigMgrSU
         $CommonParams.Add('AdvertisementID',$DeploymentID)
 
         #Create an SSRS Email Subscription for the report "Compliance 1 - Overall compliance"
@@ -285,14 +285,14 @@ Switch ($MessageID) {
         Start-Sleep -Seconds 10
     }
     30198 { # Delete a Software Update Group Deployment
-        #Message ID 30198, Component Microsoft.ConfigurationManagement.exe, System BOURNE.fhlb.com, Type Audit, Source SMS Provider, Severity Information,
-        #User "FHLB\ConfigMgrSU" deleted updates assignment 16777483 ({4AC5D2CE-90CB-4B12-BF40-40483A820331}).
-        #User Name : FHLB\ConfigMgrSU
+        #Message ID 30198, Component Microsoft.ConfigurationManagement.exe, System BOURNE.Contoso.com, Type Audit, Source SMS Provider, Severity Information,
+        #User "Contoso\ConfigMgrSU" deleted updates assignment 16777483 ({4AC5D2CE-90CB-4B12-BF40-40483A820331}).
+        #User Name : Contoso\ConfigMgrSU
     }
     30219 { # Create a Software Update Group
-        #Message ID 30219, Component Microsoft.ConfigurationManagement.exe, System BOURNE.fhlb.com, Type Audit, Source SMS Provider, Severity Information,
-        #User "FHLB\ConfigMgrSU" created authorization list "16821607" (CI_UniqueID=ScopeId_D955DB0D-84DB-4C03-B5F6-6E4C056B0BED/AuthList_A19ACEE5-D157-4F3B-A669-F0F49EB5796B, CIVersion=1).
-        #User Name : FHLB\ConfigMgrSU
+        #Message ID 30219, Component Microsoft.ConfigurationManagement.exe, System BOURNE.Contoso.com, Type Audit, Source SMS Provider, Severity Information,
+        #User "Contoso\ConfigMgrSU" created authorization list "16821607" (CI_UniqueID=ScopeId_D955DB0D-84DB-4C03-B5F6-6E4C056B0BED/AuthList_A19ACEE5-D157-4F3B-A669-F0F49EB5796B, CIVersion=1).
+        #User Name : Contoso\ConfigMgrSU
     }
     5800 { # System Created a Software Update Group Deployment
         #=== Status Filter Rule ===
@@ -300,7 +300,7 @@ Switch ($MessageID) {
         #Component: SMS_OBJECT_REPLICATION_MANAGER
         #Message Type: Milestone
         #Message ID: 5800
-        #Run a Program: "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.FHLB.com -SiteServer %sitesvr -SiteCode %sc -MessageID %msgid -DeploymentID "%msgis01"
+        #Run a Program: "C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.exe" -ExecutionPolicy Bypass -NoProfile -File "E:\Scripts\New-SSRS_Subscription_FromCMEvent.ps1" -SSRSServer Bourne.Contoso.com -SiteServer %sitesvr -SiteCode %sc -MessageID %msgid -DeploymentID "%msgis01"
         #=== Status Message Info ===
         #Description: CI Assignment Manager successfully processed new CI Assignment Workstation Monthly Patching_2_2017-10-31 08:53:13.
         #Properties: CI Assignment ID : {0019cbd9-6cb9-41a5-a4fc-7e56e853927c}
@@ -356,7 +356,7 @@ Switch ($MessageID) {
         If (Test-Path -Path "$ScriptFile2.xml") { Remove-Item -Path "$ScriptFile2.xml" }
     }
     5802 { # System deleted a Software Update Group Deployment
-        #Message ID 5802, Component SMS_OBJECT_REPLICATION_MANAGER, System BOURNE.fhlb.com, Type Milestone
+        #Message ID 5802, Component SMS_OBJECT_REPLICATION_MANAGER, System BOURNE.Contoso.com, Type Milestone
         #CI Assignment Manager successfully removed CI Assignment Microsoft Software Updates - 2017-11-27 10:28:02 AM.
         #CI Assignment ID : {4AC5D2CE-90CB-4B12-BF40-40483A820331}
     }

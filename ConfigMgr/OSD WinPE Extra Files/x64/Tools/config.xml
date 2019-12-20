@@ -1,0 +1,105 @@
+<!--
+Format
+<Services>
+  <Service Name="Services Name">
+    <Port Name="service name bound to the port" Value="Port number and/or port ranges seperated by commas" Protocol="TCP|UDP|Both"/>
+  </Service>
+</Services>
+-->
+
+<Services>
+  <Service Name="Implimented DC">
+    <Port Name="DNS" Value="53" Protocol="BOTH"/>
+    <Port Name="WINS Replication" Value="42" Protocol="TCP"/>
+    <Port Name="NetBIOS Name" Value="137" Protocol="UDP"/>
+    <Port Name="NetBIOS Session" Value="139" Protocol="TCP"/>
+    <Port Name="SMB" Value="445" Protocol="TCP"/>
+    <Port Name="LDAP SSL" Value="636" Protocol="TCP"/>
+    <Port Name="LDAP GC SSL" Value="3269" Protocol="TCP"/>
+    <Port Name="Kerberos" Value="88" Protocol="TCP"/>
+    <Port Name="RPC" Value="135" Protocol="TCP"/>
+    <Port Name="LDAP" Value="389" Protocol="BOTH"/>
+    <Port Name="LDAP GC" Value="3268" Protocol="TCP"/>
+  </Service>
+
+  <Service Name="Implimented DC - No WINS">
+    <Port Name="DNS" Value="53" Protocol="BOTH"/>
+    <Port Name="NetBIOS Name" Value="137" Protocol="UDP"/>
+    <Port Name="NetBIOS Session" Value="139" Protocol="TCP"/>
+    <Port Name="SMB" Value="445" Protocol="TCP"/>
+    <Port Name="LDAP SSL" Value="636" Protocol="TCP"/>
+    <Port Name="LDAP GC SSL" Value="3269" Protocol="TCP"/>
+    <Port Name="Kerberos" Value="88" Protocol="TCP"/>
+    <Port Name="RPC" Value="135" Protocol="TCP"/>
+    <Port Name="LDAP" Value="389" Protocol="BOTH"/>
+    <Port Name="LDAP GC" Value="3268" Protocol="TCP"/>
+  </Service>
+
+  <Service Name="Pre-Implimented DC">
+    <Port Name="WINS Replication" Value="42" Protocol="TCP"/>
+    <Port Name="DNS" Value="53" Protocol="BOTH"/>
+    <Port Name="NetBIOS Name" Value="137" Protocol="UDP"/>
+    <Port Name="NetBIOS Session" Value="139" Protocol="TCP"/>
+    <Port Name="RPC" Value="135" Protocol="TCP"/>
+  </Service>
+
+  <Service Name="Exchange Services">
+    <Port Name="IMAP" Value="143" Protocol="TCP"/>
+    <Port Name="IMAP over SSL" Value="993" Protocol="TCP"/>
+    <Port Name="POP3" Value="110" Protocol="TCP"/>
+    <Port Name="POP3 over SSL" Value="995" Protocol="TCP"/>
+    <Port Name="RPC over HTTPS" Value="443" Protocol="TCP"/>
+    <Port Name="SMTP" Value="25" Protocol="TCP"/>
+    <Port Name="SMTP" Value="25" Protocol="UDP"/>
+    <Port Name="Information Store" Value="6001" Protocol="TCP"/>
+    <Port Name="Directory Referral" Value="6002" Protocol="TCP"/>
+    <Port Name="DSProxy/NSPI" Value="6004" Protocol="TCP"/>
+  </Service>
+
+  <Service Name="Common Windows Services">
+    <Port Name="Web Services" Value="80" Protocol="TCP"/>
+    <Port Name="RPC" Value="135" Protocol="TCP"/>
+	<Port Name="NetBIOS Name" Value="137" Protocol="UDP"/>
+    <Port Name="NetBIOS Session" Value="139" Protocol="TCP"/>
+    <Port Name="SMB" Value="445" Protocol="TCP"/>
+	<Port Name="LPD" Value="515" Protocol="TCP"/>
+	<Port Name="Microsoft RPC" Value="1063" Protocol="TCP"/>
+	<Port Name="Microsoft TS" Value="3389" Protocol="TCP"/>
+   </Service>
+
+   <Service Name="Name Resolution Only">
+    <Port Name="DNS" Value="53" Protocol="BOTH"/>
+    <Port Name="WINS Replication" Value="42" Protocol="TCP"/>
+   </Service>
+
+   <Service Name="ESX VC Query">
+    <Port Name="HTTP" Value="80" Protocol="TCP"/>
+    <Port Name="LDAP" Value="389" Protocol="TCP"/>
+    <Port Name="HTTPS" Value="443" Protocol="TCP"/>
+    <Port Name="Authentication" Value="902" Protocol="BOTH"/>
+    <Port Name="VM RC Traffic" Value="903" Protocol="BOTH"/>
+    <Port Name="VMware http" Value="8080" Protocol="TCP"/>
+    <Port Name="VMware https" Value="8443" Protocol="TCP"/>
+    <Port Name="License D" Value="27000" Protocol="TCP"/>
+    <Port Name="License LM" Value="27010" Protocol="TCP"/>
+   </Service>
+
+   <Service Name="ESX HOST Query">
+    <Port Name="HTTP" Value="80" Protocol="TCP"/>
+    <Port Name="SLP" Value="427" Protocol="UDP"/>
+    <Port Name="HTTPS" Value="443" Protocol="TCP"/>
+    <Port Name="SSL Link" Value="636" Protocol="TCP"/>
+    <Port Name="Authentication" Value="902" Protocol="BOTH"/>
+    <Port Name="VM RC Traffic" Value="903" Protocol="TCP"/>
+    <Port Name="Vmotion" Value="8000" Protocol="TCP"/>
+    <Port Name="License D" Value="27000" Protocol="TCP"/>
+    <Port Name="License LM" Value="27010" Protocol="TCP"/>
+   </Service>
+
+   <Service Name="Windows Discovery">
+    <Port Name="LDAP GC" Value="3268" Protocol="TCP"/>
+    <Port Name="LDAP" Value="389" Protocol="TCP"/>
+    <Port Name="RPC" Value="135" Protocol="BOTH"/>
+   </Service>
+
+   </Services>

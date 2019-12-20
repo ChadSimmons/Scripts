@@ -1,0 +1,89 @@
+<job id="OutputTSVariables.wsf">
+<script language="VBScript" src="ZTIUtility.vbs"/>
+
+<script language="VBScript">
+
+
+' //***************************************************************************
+' // ***** Script Header *****
+' //
+' // Solution:  Solution Accelerator for Business Desktop Deployment (Custom Script)
+' // File:      OutputTSVariables.wsf
+' //
+' // Purpose:   Output the task sequence variables at a specific stage in the Task Sequence for debugging purposes.
+' //            WARNING: This script is provided for research purposes only and the creator does not assume any responsibility for use or damage caused
+' // Usage:     cscript OutputTSVariables.wsf
+' //
+' // Customer Build Version:      1.0.0
+' // Customer Script Version:     9.0.0
+' //
+' // Microsoft History:
+' //          
+' // Customer History:
+' // 1.0.0     A.Shivji  06/25/2008  Created initial version.
+' // 
+' // 
+' //
+' // ***** End Header *****
+' //***************************************************************************
+
+
+'//----------------------------------------------------------------------------
+'//
+'//  Global constant and variable declarations
+'//
+'//----------------------------------------------------------------------------
+
+'Option Explicit
+
+Dim iRetVal
+
+  
+'//----------------------------------------------------------------------------
+'//  End declarations
+'//----------------------------------------------------------------------------
+
+
+'//----------------------------------------------------------------------------
+'//  Main routine
+'//----------------------------------------------------------------------------
+
+On Error Resume Next
+iRetVal = ZTIProcess
+ProcessResults iRetVal
+On Error Goto 0
+
+
+'//---------------------------------------------------------------------------
+'//
+'//  Function:    ZTIProcess()
+'//
+'//  Input:    None
+'// 
+'//  Return:    Success - 0
+'//        Failure - non-zero
+'//
+'//  Purpose:    Perform main ZTI processing
+'//        
+'//---------------------------------------------------------------------------
+Function ZTIProcess()
+
+    iRetVal = Success
+
+    on error resume next
+
+    oLogging.CreateEntry "------------ Initialization OutputTSVariables.wsf -------------", LogTypeInfo
+
+	Dim sVar
+    Set osdV4 = CreateObject("Microsoft.SMS.TSEnvironment")
+    For Each sVar in osdv4.GetVariables()
+                oLogging.CreateEntry sVar & ":" & oEnvironment.Item(sVar), LogTypeInfo
+    Next
+    oLogging.CreateEntry "------------ Departing OutputTSVariables.wsf -------------", LogTypeInfo
+
+    ZTIProcess = iRetVal
+
+End Function
+
+</script>
+</job>

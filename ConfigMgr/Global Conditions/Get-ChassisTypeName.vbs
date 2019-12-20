@@ -46,11 +46,11 @@ Function GetChassisTypeName
 			strChassisTypeName = "Undefined" 'Docking Stating
 		ElseIf strChassisTypeName = "Undefined" Then
 			Select Case objInstance.ChassisTypes(0)
-				Case "8", "9", "10", "11", "12", "14", "18", "21"
+				Case "8", "9", "10", "11", "12", "14", "18", "21", "30", "31", "32"
 					strChassisTypeName = "Laptop"
-				Case "3", "4", "5", "6", "7", "15", "16"
+				Case "3", "4", "5", "6", "7", "15", "16", "35", "36"
 					strChassisTypeName = "Desktop"
-				Case "23"
+				Case "23", "28"
 					strChassisTypeName = "Server"
 				Case Else
 					'none of the defined ChassisTypes IDs on MSDN

@@ -176,8 +176,8 @@ Function Write-LogMessage {
 		Default { $intType = 1 } #1 = Normal
 	}
 	If ($LogFile.Length -lt 6) {$LogFile = "$env:WinDir\Logs\Script.log"} #Must not be null
-	If ($Component -eq $null) {$Component = ' '} #Must not be null
-	If ($Message -eq $null) {$Message = '<blank>'} #Must not be null or blank
+	If ($null -eq $Component) {$Component = ' '} #Must not be null
+	If ($null -eq $Message) {$Message = '<blank>'} #Must not be null or blank
 	If ($Console) { Write-Output $Message } #write to console if enabled
 	If (-not(Test-Path -Path 'variable:global:TimezoneBias')) {
 		[string]$global:TimezoneBias = [System.TimeZoneInfo]::Local.GetUtcOffset((Get-Date)).TotalMinutes

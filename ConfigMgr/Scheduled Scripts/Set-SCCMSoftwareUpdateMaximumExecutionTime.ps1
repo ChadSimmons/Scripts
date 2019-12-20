@@ -147,9 +147,9 @@ Function Write-LogMessage {
 		{ @('2', 'Warn', 'Warning') -contains $_ } { $intType = 2 } #2 = Warning (yellow)
         Default { $intType = 1 } #1 = Normal
 	}
-	If ($Component -eq $null) {$Component = ' '} #Must not be null
+	If ($null -eq $Component) { $Component = ' ' } #Must not be null
 	try { #write log file message
-		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
+		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$intType`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 	} catch { Write-Error "Failed to write to the log file '$LogFile'" }
 	If ($Console) { Write-Output $Message } #write to console if enabled
 }; Set-Alias -Name 'Write-CMEvent' -Value 'Write-LogMessage' -Description 'Log a message in CMTrace format'
@@ -191,9 +191,9 @@ Function Connect-ConfigMgr {
     #   if SiteServer is not specified, use the computer from PSDrive if it exists, otherwise use the current computer
     #.Link
     #   http://blogs.technet.com/b/configmgrdogs/archive/2015/01/05/powershell-ise-add-on-to-connect-to-configmgr-connect-configmgr.aspx
-    If ($Env:SMS_ADMIN_UI_PATH -ne $null) {
+    If ($null -ne $Env:SMS_ADMIN_UI_PATH) {
         #import the module if it exists
-        If ((Get-Module ConfigurationManager) -eq $null) {
+        If ($null -eq (Get-Module ConfigurationManager)) {
             Write-Verbose 'Importing ConfigMgr PowerShell Module...'
             $TempVerbosePreference = $VerbosePreference
             $VerbosePreference = 'SilentlyContinue'
@@ -217,7 +217,7 @@ Function Connect-ConfigMgr {
             }
         }
         # Connect to the site's drive if it is not already present
-        if ((Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue) -eq $null) {
+        if ($null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
             Write-Verbose -Message "Creating ConfigMgr Site Drive $($CMSiteCode):\ on server $SiteServer"
             # If SiteCode was not specified use the current computer
             If ([string]::IsNullOrEmpty($SiteServer)) {
@@ -260,7 +260,7 @@ Connect-ToConfigMgr -SiteCode $SiteCode -SiteServer $SiteServer
 #Get the list of updates to change
 $Progress.Status = 'Getting Software Updates' ; Write-Progress @Progress
 try {
-	$Updates = Get-CMSoftwareUpdate -Fast -CategoryName @('Windows 10','Windows Server 2016') -IsExpired $false -IsSuperseded $false | Where MaxExecutionTime -LT $($MaximumExecutionMins*60)
+	$Updates = Get-CMSoftwareUpdate -Fast -CategoryName @('Windows 10','Windows Server 2016') -IsExpired $false -IsSuperseded $false | Where-Object MaxExecutionTime -LT $($MaximumExecutionMins*60)
 } catch {
 	Write-LogMessage -Message 'Failed to get the list of Software Updates' -Type Error
 	Stop-Script -ReturnCode 2
@@ -271,8 +271,8 @@ try {
 #$Updates = $Updates | Where LocalizedDisplayName -NotLike 'Feature update to Windows*'
 
 Write-LogMessage -Message "Found $($Updates.Count) Updates with Maximum Execution Time less than $MaximumExecutionMins minutes."
-Write-Verbose -Message $($Updates | Select -First 1 | Format-List | Out-String)
-Write-Verbose -Message $($Updates | Select MaxExecutionTime, LocalizedDisplayName | Format-Table -AutoSize | Out-String)
+Write-Verbose -Message $($Updates | Select-Object -First 1 | Format-List | Out-String)
+Write-Verbose -Message $($Updates | Select-Object MaxExecutionTime, LocalizedDisplayName | Format-Table -AutoSize | Out-String)
 
 #Set the Max Execution Time on the list of updates
 $Progress.Status = 'Updating Software Updates' ; Write-Progress @Progress

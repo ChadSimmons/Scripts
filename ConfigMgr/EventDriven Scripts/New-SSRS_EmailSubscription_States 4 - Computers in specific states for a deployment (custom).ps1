@@ -17,7 +17,7 @@ Param(
     [parameter(Mandatory=$false,Position=2,ValueFromPipeline)][string]$SiteCode,
     [parameter(Mandatory=$true, Position=3,ValueFromPipeline)][string]$AdvertisementID,
     [parameter(Mandatory=$false,Position=4,ValueFromPipeline)][string]$ReportPathRoot = 'ConfigMgr',
-    [parameter(Mandatory=$false,Position=5,ValueFromPipeline)][string]$emailTO = 'Chad.Simmons@fhlb.com',
+    [parameter(Mandatory=$false,Position=5,ValueFromPipeline)][string]$emailTO = 'Chad.Simmons@contoso.com',
     [parameter(Mandatory=$false,Position=6,ValueFromPipeline)][string]$emailCC = 'Chad.Simmons@CatapultSystems.com',
     [parameter(Mandatory=$false,Position=7,ValueFromPipeline)][datetime]$StartTime = $(Get-Date).AddMinutes(15),
     [parameter(Mandatory=$false,Position=8,ValueFromPipeline)][datetime]$EndTime = $((Get-Date).AddDays(31)).AddMinutes(15),
@@ -34,7 +34,7 @@ If ($psISE) {
 
     [datetime]$StartTime = $(Get-Date).AddMinutes(15)
     [datetime]$EndTime = $((Get-Date).AddDays(31)).AddMinutes(15)
-    [string]$emailTO = 'Chad.Simmons@fhlb.com'
+    [string]$emailTO = 'Chad.Simmons@Contoso.com'
     [string]$emailCC = 'Chad.Simmons@CatapultSystems.com'
     [string]$SSRSServer = 'localhost'
     [string]$SiteServer = 'localhost'
@@ -51,7 +51,7 @@ Function Get-ScriptPath {
 	#.Synopsis
 	#   Get the folder of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	#   2017/07/25 by Chad@chadstech.net
 	try {
 		$script:ScriptPath = Split-Path -Path $((Get-Variable MyInvocation -Scope 1 -ErrorAction SilentlyContinue).Value).MyCommand.Path -Parent
@@ -66,7 +66,7 @@ Function Get-ScriptPath {
 Function Get-ScriptName {
 	#.Synopsis  Get the name of the script file
 	#.Notes
-	#   See snippet Get-ScriptPath.ps1 for excrutiating details and alternatives
+	#   See snippet Get-ScriptPath.ps1 for excruciating details and alternatives
 	#   2017/07/25 by Chad@chadstech.net
 
 	If ($psISE) {
@@ -120,9 +120,9 @@ Function Write-CMEvent {
 		{ @('2', 'Warn', 'Warning') -contains $_ } { $intType = 2 } #2 = Warning (yellow)
         Default { $intType = 1 } #1 = Normal
 	}
-	If ($Component -eq $null) {$Component = ' '} #Must not be null
+    If ($null -eq $Component) { $Component = ' ' } #Must not be null
 	try { #write log file message
-		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
+        "<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$intType`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 	} catch { Write-Error "Failed to write to the log file '$LogFile'" }
 	If ($Console) { Write-Output $Message } #write to console if enabled
 }; Set-Alias -Name 'Write-LogMessage' -Value 'Write-CMEvent' -Description 'Log a message in CMTrace format'
@@ -243,7 +243,7 @@ Function CreateSSRSSubscription {
     } catch {
         Write-LogMessage -Message $("Exception: {0} Inner: {1}" -f $_.Exception.Message, $_.Exception.Message.InnerException) -Type Error
         Write-Error ("Exception: {0} Inner: {1}" -f $_.Exception.Message, $_.Exception.Message.InnerException)
-        $error[0] | fl -force
+        $error[0] | Format-List -force
         Stop-Script -ReturnCode $_.Exception.HResult
         Throw "Failed! $($error[0])"
     }

@@ -71,7 +71,7 @@ Function Restart-ComputerEx {
 Function Test-PendingRestartEx {
 	[cmdletbinding()]
 	param (
-		[Parameter(Mandatory=$true)][string[]]$Computer = "$env:ComputerName",
+		[Parameter()][string[]]$Computer = "$env:ComputerName",
 		[string]$ResultsFile,
 		[switch]$doRestart,
 		[int]$RestartDelaySeconds = 600,

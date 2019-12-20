@@ -21,11 +21,11 @@ Function Invoke-CleanMgr {
 	#   http://support.microsoft.com/kb/253597
 
 	#Capture current free disk space on Drive C
-	$FreeSpaceBefore = (Get-WmiObject win32_logicaldisk -filter "DeviceID='C:'" | select Freespace).FreeSpace
+	$FreeSpaceBefore = (Get-WmiObject win32_logicaldisk -filter "DeviceID='C:'" | Select-Object Freespace).FreeSpace
 
 	Set-Variable -Name SageRun -Value 1703
 	Set-Variable -Name RegPath -Value 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches'
-	Set-Varibale -Name RegName -Value "StateFlags$SageRun"
+	Set-Variable -Name RegName -Value "StateFlags$SageRun"
 	#Set StateFlags0012 setting for each item in Windows 8.1 disk cleanup utility
 	if (-not (get-itemproperty -path "$RegPath\Active Setup Temp Folders" -name $RegPath -ErrorAction SilentlyContinue)) {
 		set-itemproperty -path "$RegPath\Active Setup Temp Folders" -name $RegName -type DWORD -Value 2
@@ -60,9 +60,9 @@ Function Invoke-CleanMgr {
 	do {
 		"waiting for cleanmgr to complete..."
 		start-sleep 5
-	} while ((get-wmiobject win32_process | where-object {$_.processname -eq 'cleanmgr.exe'} | measure).count)
+	} while ((get-wmiobject win32_process | where-object {$_.processname -eq 'cleanmgr.exe'} | Measure-Object).count)
 	 
-	$FreespaceAfter = (Get-WmiObject win32_logicaldisk -filter "DeviceID='C:'" | select Freespace).FreeSpace/1GB
+	$FreespaceAfter = (Get-WmiObject win32_logicaldisk -filter "DeviceID='C:'" | Select-Object Freespace).FreeSpace/1GB
 
 	"Free Space Before: {0}" -f $FreespaceBefore
 	"Free Space After: {0}" -f $FreespaceAfter

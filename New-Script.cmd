@@ -1,4 +1,7 @@
 @Echo Off
+setlocal
+set myCustomVariable=myCustomValue
+::=================================================================================================
 If /I "%1"=="/?" goto:about
 If /I "%1"=="/h" goto:about
 If /I "%1"=="/help" goto:about
@@ -17,14 +20,18 @@ echo .Inputs
 echo     A description of the inputs.
 echo .Outputs
 echo     A description of the output.
-echo .ChangeLog
+echo .Notes
 echo    Additional information about the function or script.
-echo    - [yyyy/mm/dd] by [my.name@email.com] - Modified [ChangeDescription]
-echo    - [yyyy/mm/dd] by [my.name@email.com] - Created
+echo    ========== Keywords ==========
+echo    Keywords:
+echo    ========== Change Log History ==========
+echo    - yyyy/mm/dd by Chad Simmons - Modified $ChangeDescription$
+echo    - 2017/12/27 by Chad.Simmons@CatapultSystems.com - Created
+echo    - 2017/12/27 by Chad@ChadsTech.net - Created
+echo    === To Do / Proposed Changes ===
+echo    - TODO: ???
 echo .Link
 echo     The name and/or URL of a related topic.
-echo .Functionality
-echo     The intended use of the function.
 echo ===========================================================================================
 goto:eof
 :main
