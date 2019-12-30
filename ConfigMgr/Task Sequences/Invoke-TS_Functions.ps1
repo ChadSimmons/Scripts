@@ -23,7 +23,7 @@ $global:ScriptFileItem = Get-Item -Path $global:ScriptFile
 
 If ((Get-Location).Provider -ne 'Microsoft.PowerShell.Core\FileSystem') { Push-Location -Path $env:SystemRoot }
 
-If (!(Test-Path 'variable:global:LogFile')){$global:LogFile=$(Join-Path -Path $global:ScriptPath -ChildPath 'SMSTS.TSFunctions.log')}
+If (-not(Test-Path 'variable:global:LogFile') -or [string]::IsNullOrEmpty($global:LogFile)) { $global:LogFile=$(Join-Path -Path $global:ScriptPath -ChildPath 'SMSTS.TSFunctions.log') }
 
 #region ====== Functions ==============================================================================================================================================================================
 Function Write-LogMessageSE {

@@ -22,6 +22,8 @@
 #    PowerShell.exe -ExecutionPolicy Bypass -File Invoke-TS_Initialize.ps1 -Quiet
 #.Notes
 #	========== Change Log History ==========
+#	- 2019/12/30 by Chad.Simmons@CatapultSystems.com - Deprecated Function Get-NICEthernetConnectionInfo and migrated functionality into Function Get-NICConfigurationInfo
+#               Updated Function Get-NICConfigurationInfo to include Ethernet connection status, better determine the active NIC and provide more info.  Also renamed variables to group them as zTS_NIC_
 #	- 2019/08/14 by Chad.Simmons@CatapultSystems.com - Updated Function Get-NICEthernetConnectionInfo to refine wired connection status inconsistencies
 #	- 2019/08/08 by Chad.Simmons@CatapultSystems.com - Replaced Function Get-NICAdapterInfo with Get-NICEthernetConnectionInfo to correct wired connection status inconsistencies
 #	- 2019/07/12 by Chad.Simmons@CatapultSystems.com - reworked Set-Var and Output routines to address seemingly random issues
@@ -107,7 +109,7 @@ Function Get-BiosInfo {
     Set-Var -Name 'zTS_BIOSSerialNumber' -Value $Info.SerialNumber -Alias 'SerialNumber'
     Set-Var -Name 'zTS_BIOSVersion' -Value $Info.SMBIOSBIOSVersion -Alias 'BIOSVersion'
     Set-Var -Name 'zTS_BIOSReleaseDate' -Value $Info.ReleaseDate -Alias 'BIOSReleaseDate'
-    Set-Var -Name 'zTS_BIOSReleaseDateTimestamp' -Value $([System.Management.ManagementDateTimeConverter]::ToDateTime($Info.ReleaseDate))
+    Set-Var -Name 'zTS_BIOSReleaseDateTimestamp' -Value $(Get-Date $([System.Management.ManagementDateTimeConverter]::ToDateTime($Info.ReleaseDate)) -Format 's')
 
 	# First method, one-liner, extract answer from setupact.log using Select-String and tidy-up with -replace
 	# Look in the setup logfile to see what bios type was detected (EFI or BIOS)
@@ -218,9 +220,9 @@ Function Get-OsInfo {
     Set-Var -Name 'zTS_OSRegisteredOrganization' -Value $Info.Organization
     Set-Var -Name 'zTS_OSRegisteredUser' -Value $Info.RegisteredUser
     Set-Var -Name 'zTS_OSInstallDate' -Value $Info.InstallDate
-    Set-Var -Name 'zTS_OSInstallDatestamp' -Value $([System.Management.ManagementDateTimeConverter]::ToDateTime($Info.InstallDate))
+    Set-Var -Name 'zTS_OSInstallDatestamp' -Value $(Get-Date $([System.Management.ManagementDateTimeConverter]::ToDateTime($Info.InstallDate)) -Format 's')
     Set-Var -Name 'zTS_OSLastBootUpTime' -Value $Info.LastBootUpTime
-    Set-Var -Name 'zTS_OSLastBootUpTimestamp' -Value $([System.Management.ManagementDateTimeConverter]::ToDateTime($Info.LastBootUpTime))
+    Set-Var -Name 'zTS_OSLastBootUpTimestamp' -Value $(Get-Date $([System.Management.ManagementDateTimeConverter]::ToDateTime($Info.LastBootUpTime)) -Format 's')
     Set-Var -Name 'zTS_OSBootDevice' -Value $Info.BootDevice
     Set-Var -Name 'zTS_OSSKU' -Value $Info.OperatingSystemSKU
     Set-Var -Name 'zTS_OSType' -Value $Info.OSType
@@ -253,49 +255,136 @@ Function Get-SystemEnclosureInfo {
     }
 }
 Function Get-NICConfigurationInfo {
-    (Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_NetworkAdapterConfiguration' -Filter 'IPEnabled = 1') | ForEach-Object {
-        $_.IPAddress | ForEach-Object {
-            #TODO: log NIC name/description/ServiceName as well
-            if($null -ne $_) {
-                if($_.IndexOf('.') -gt 0 -and !$_.StartsWith('169.254') -and $_ -ne '0.0.0.0') {
-                    if($TSvars.ContainsKey('zTS_IPAddress')) {
-                        Set-Var -Name 'zTS_IPAddresses' -Value $($TSvars['zTS_IPAddress'] + ',' + $_) -Force -Alias 'IPAddress'
-                    } else {
-                        Set-Var -Name 'zTS_IPAddresses' -Value $_ -Alias 'IPAddress'
+    #.Synopsis
+    #  Return the configuration info for the NIC most likely to be the active network connection
+    #.Notes
+    # Somewhat based on Function GetNetworkInfo() from ZTIGather.wsf in the Microsoft Deployment Toolkit (MDT)
+    # Somewhat based on Code in FriendsOfMDT GitHub project https://raw.githubusercontent.com/FriendsOfMDT/PSD/master/Scripts/PSDUtility.psm1
+    # Much of this code is taken from Grant Carthew's script at https://gist.githubusercontent.com/grantcarthew/7000687/raw/8e07d45280a2b91d578bd125173af47ded54288e/Get-ActiveIP.ps1
+
+    #Getting the interface index being used by the default route.
+    #WARNING: Getting only the first object may pose an issue on some computers
+    $NICIndex = @(Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_IP4RouteTable' -Filter "Destination = '0.0.0.0' and Mask = '0.0.0.0'" | Sort-Object Metric1 | Select-Object -ExpandProperty InterfaceIndex) # | Select-Object -First 1
+    $NetAdapters = @(Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_NetworkAdapter' -Filter 'NetConnectionStatus = 2' | Where-Object { $NICIndex -contains $_.InterfaceIndex }) #Connected NICs in the list of active IPv4 route table NICs
+    #AdapterType, Caption, Description, Index, InterfaceIndex, MACAddress, Manufacturer, NetConnectionID, NetEnabled, ProductName, ServiceName
+    $NICs = @(Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_NetworkAdapterConfiguration' -Filter 'IPEnabled = 1' | Where-Object { $NetAdapters.Index -contains $_.Index }) #IPEnabled NICs in the Net Adapters list
+    #Index, InterfaceIndex, Description, Caption, DHCPServer, DNSDomain, DNSDomainSuffixSearchOrder, DNSServerSearchOrder, IPAddress, DefaultIPGateway, IPSubnet, MACAddress, ServiceName
+
+    #filter to include only those with an IPAddress, IPSubnet, DefaultIPGateway and MACAddress.  this should be redundant
+    #WARNING: Getting only the first object may pose an issue on some computers
+    $NICs = @($NICs | Where-Object { $_.DefaultIPGateway.Count -gt 0 -and $_.IPAddress.Count -gt 0 -and $_.IPSubnet.Count -gt 0 -and $($_.MACAddress).IndexOf(':') -gt 0 })
+    $ActiveNIC = $null
+    ForEach ($NIC in $NICs) {
+        ForEach ($IPAddress in $NIC.IPAddress) {
+            If ($IPAddress.IndexOf('.') -gt 0 -and !$($IPAddress.StartsWith('169.254')) -and $IPAddress -ne '0.0.0.0') {
+                #a REAL IPv4 IPAddress exists
+                ForEach ($IPSubnet in $NIC.IPSubnet) {
+                    If ($IPSubnet.IndexOf('.') -gt 0 -and !$($IPSubnet.StartsWith('169.254')) -and $IPSubnet -ne '0.0.0.0') {
+                        #a REAL IPv4 IPSubnet exists
+                        ForEach ($DefaultIPGateway in $NIC.DefaultIPGateway) {
+                            If ($DefaultIPGateway.IndexOf('.') -gt 0 -and !$($DefaultIPGateway.StartsWith('169.254')) -and $DefaultIPGateway -ne '0.0.0.0') {
+                            #a REAL IPv4 DefaultIPGateway exists
+                                If ($null -eq $ActiveNIC) { $ActiveNIC = $NIC }
+                                break
+                            }
+                        }
                     }
                 }
             }
         }
-        $_.IPSubnet | ForEach-Object {
-            if($null -ne $_ -and $_.IndexOf('.') -gt 0) {
-                if($TSvars.ContainsKey('zTS_IPSubnet')) {
-                    Set-Var -Name 'zTS_IPSubnet' -Value $($TSvars['zTS_IPSubnet'] + ',' + $_) -Force
-                } else {
-                    Set-Var -Name 'zTS_IPSubnet' -Value $_
-                }
-            }
-        }
-        $_.DefaultIPGateway | ForEach-Object {
-            if($null -ne $_ -and $_.IndexOf('.') -gt 0) {
-                if($TSvars.ContainsKey('zTS_DefaultGateway')) {
-                    Set-Var -Name 'zTS_DefaultGateway' -Value $($TSvars['zTS_DefaultGateway'] + ',' + $_) -Force -Alias 'DefaultGateway'
-                } else {
-                    Set-Var -Name 'zTS_DefaultGateway' -Value $_ -Alias 'DefaultGateway'
-                }
-            }
-        }
-        $_.MacAddress | ForEach-Object {
-            if($null -ne $_ -and $_.IndexOf('.') -gt 0) {
-                if($TSvars.ContainsKey('zTS_MacAddresses')) {
-                    Set-Var -Name 'zTS_MacAddresses' -Value $($TSvars['zTS_MacAddresses'] + ',' + $_) -Force -Alias 'MacAddress'
-                } else {
-                    Set-Var -Name 'zTS_MacAddresses' -Value $_ -Alias 'MacAddress'
-                }
-            }
-        }
     }
+    $ActiveNetAdapter = $NetAdapters | Where-Object { $_.InterfaceIndex -eq $ActiveNIC.InterfaceIndex}
+
+    Function Get-FirstIPv4Address ($List) {
+        [Regex]$reg = "\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"
+        $result = ''
+        ForEach ($IP in $List) {
+            $match = $reg.Match($ip)
+            If ($match.Success) {
+                $result = $match.Groups[0].Value
+                break
+            }
+        }
+        [string]$result
+    }
+
+    Set-Var -Name 'zTS_NIC_Description' -Value $ActiveNIC.Description
+    Set-Var -Name 'zTS_NIC_MACAddress' -Value $ActiveNIC.MACAddress -Alias 'MacAddress'
+    #WARNING: Getting only the first IPv4 address may pose an issue on some computers
+    Set-Var -Name 'zTS_NIC_IPAddress' -Value (Get-FirstIPv4Address $ActiveNIC.IPAddress) -Alias 'IPAddress'
+    #WARNING: Getting only the first IPv4 address may pose an issue on some computers
+    Set-Var -Name 'zTS_NIC_IPSubnet' -Value (Get-FirstIPv4Address $ActiveNIC.IPSubnet)
+    #WARNING: Getting only the first IPv4 address may pose an issue on some computers
+    Set-Var -Name 'zTS_NIC_DefaultIPGateway' -Value (Get-FirstIPv4Address $ActiveNIC.DefaultIPGateway) -Alias 'DefaultGateway'
+    Set-Var -Name 'zTS_NIC_DHCPServer' -Value $ActiveNIC.DHCPServer
+    Set-Var -Name 'zTS_NIC_DNSHostName' -Value $ActiveNIC.DNSHostName
+    Set-Var -Name 'zTS_NIC_DNSDomain' -Value $ActiveNIC.DNSDomain
+    Set-Var -Name 'zTS_NIC_DNSServerSearchOrder' -Value $(@($ActiveNIC.DNSServerSearchOrder) -join ',')
+    Set-Var -Name 'zTS_NIC_DNSDomainSuffixSearchOrder' -Value $(@($ActiveNIC.DNSDomainSuffixSearchOrder) -join ',')
+    Set-Var -Name 'zTS_NIC_ServiceName' -Value $ActiveNIC.ServiceName
+    Set-Var -Name 'zTS_NIC_Index' -Value $ActiveNIC.Index
+    Set-Var -Name 'zTS_NIC_InterfaceIndex' -Value $ActiveNIC.InterfaceIndex
+    Set-Var -Name 'zTS_NIC_AdapterType' -Value $ActiveNetAdapter.AdapterType
+    Set-Var -Name 'zTS_NIC_Manufacturer' -Value $ActiveNetAdapter.Manufacturer
+    Set-Var -Name 'zTS_NIC_NetConnectionID' -Value $ActiveNetAdapter.NetConnectionID
+    Set-Var -Name 'zTS_NIC_ProductName' -Value $ActiveNetAdapter.ProductName
+
+    $WiredNICNames = @((Get-WmiObject -Namespace 'root\WMI' -Class 'MSNdis_PhysicalMediumType' -Filter 'NdisPhysicalMediumType = 0 and Active = "true" and InstanceName = "$($ActiveNIC.Description)"' -Property InstanceName | Where-Object { $_.InstanceName -NotMatch 'RAS|ISATAP|Teredo|6to4' }).InstanceName)
+    If ($WiredNICNames.Count -gt 0) {
+        Set-Var -Name 'zTS_NIC_EthernetConnectedName' -Value $ActiveNetAdapter.NetConnectionID
+        Set-Var -Name 'zTS_NIC_EthernetConnectedDescription' -Value $ActiveNIC.Description
+        Set-Var -Name 'zTS_NIC_EthernetConnected' -Value 'True'
+    } Else {
+        Set-Var -Name 'zTS_NIC_IsEthernetConnected' -Value 'False'
+        Write-LogMessage -Message "No NIC matches all criteria for active online wired Ethernet"
+    }
+
+    #    (Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_NetworkAdapterConfiguration' -Filter 'IPEnabled = 1') | ForEach-Object {
+    #        $_.IPAddress | ForEach-Object {
+    #            #TODO: log NIC name/description/ServiceName as well
+    #            if($null -ne $_) {
+    #                if($_.IndexOf('.') -gt 0 -and !$_.StartsWith('169.254') -and $_ -ne '0.0.0.0') {
+    #                    if($TSvars.ContainsKey('zTS_IPAddress')) {
+    #                        Set-Var -Name 'zTS_IPAddresses' -Value $($TSvars['zTS_IPAddress'] + ',' + $_) -Force -Alias 'IPAddress'
+    #                    } else {
+    #                        Set-Var -Name 'zTS_IPAddresses' -Value $_ -Alias 'IPAddress'
+    #                    }
+    #                }
+    #            }
+    #        }
+    #        $_.IPSubnet | ForEach-Object {
+    #            if($null -ne $_ -and $_.IndexOf('.') -gt 0) {
+    #                if($TSvars.ContainsKey('zTS_IPSubnet')) {
+    #                    Set-Var -Name 'zTS_IPSubnet' -Value $($TSvars['zTS_IPSubnet'] + ',' + $_) -Force
+    #                } else {
+    #                    Set-Var -Name 'zTS_IPSubnet' -Value $_
+    #                }
+    #            }
+    #        }
+    #        $_.DefaultIPGateway | ForEach-Object {
+    #            if($null -ne $_ -and $_.IndexOf('.') -gt 0) {
+    #                if($TSvars.ContainsKey('zTS_DefaultGateway')) {
+    #                    Set-Var -Name 'zTS_DefaultGateway' -Value $($TSvars['zTS_DefaultGateway'] + ',' + $_) -Force -Alias 'DefaultGateway'
+    #                } else {
+    #                    Set-Var -Name 'zTS_DefaultGateway' -Value $_ -Alias 'DefaultGateway'
+    #                }
+    #            }
+    #        }
+    #        $_.MacAddress | ForEach-Object {
+    #            if($null -ne $_ -and $_.IndexOf('.') -gt 0) {
+    #                if($TSvars.ContainsKey('zTS_MacAddresses')) {
+    #                    Set-Var -Name 'zTS_MacAddresses' -Value $($TSvars['zTS_MacAddresses'] + ',' + $_) -Force -Alias 'MacAddress'
+    #                } else {
+    #                    Set-Var -Name 'zTS_MacAddresses' -Value $_ -Alias 'MacAddress'
+    #                }
+    #            }
+    #        }
+    #    }
 }
 Function Get-NICEthernetConnectionInfo {
+    #   WARNING: This may not work properly with Hyper-V enabled computers
+    #   Use Get-NICConfigurationInfo() function variables zTS_NIC_EthernetConnected* instead
+
     #.Synopsis Determine if connected by wired Ethernet
     #https://weblogs.sqlteam.com/mladenp/2010/11/04/find-only-physical-network-adapters-with-wmi-win32_networkadapter-class/
     #https://stackoverflow.com/questions/10114455/determine-network-adapter-type-via-wmi
@@ -596,7 +685,7 @@ Get-BiosInfo
 Get-OsInfo
 Get-SystemEnclosureInfo
 Get-NICConfigurationInfo
-Get-NICEthernetConnectionInfo
+#Get-NICEthernetConnectionInfo
 Get-BatteryStatusInfo
 Get-BatteryInfo
 Get-PowerPlan
@@ -612,12 +701,12 @@ Get-LanguageAndRegion
 Get-Timezone
 
 If ($TSType) { Set-Var -Name 'zTS_TSType' -Value $TSType }
-Set-Var -Name 'zTS_PowerShellVersion' -Value $PSVersionTable.CLRVersion.ToString()
+Set-Var -Name 'zTS_PowerShellVersion' -Value $([string]$PSVersionTable.PSVersion.ToString())
 Set-Var -Name 'zTS_Hostname' -Value $env:ComputerName
-Set-Var -Name 'zTS_FinalStatus' -Value 'Started'
-Set-Var -Name 'zTS_FinalReturnCode' -Value '999' #Set to Failure, Retry unless reset to Success
-Set-Var -Name 'zTS_Async' -Value 'cmd.exe /c start /min' -Alias 'Async'
-Set-Var -Name 'zTS_PoSH' -Value 'PowerShell.exe -NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass' -Alias 'PoSH'
+Set-Var -Name 'zTS_FinalStatus' -Value 'Started' #Default to Started.  Invoke-TS_Finalize.ps1 will set as appropriate
+Set-Var -Name 'zTS_FinalReturnCode' -Value '999' #Default to "Failure, Retry" unless reset to Success by Invoke-TS_Finalize.ps1
+Set-Var -Name 'zTS_Async' -Value 'cmd.exe /c start /min' -Alias 'Async' #TSEnv for easily calling an asynchronous Command Prompt in a TaskSequence
+Set-Var -Name 'zTS_PoSH' -Value 'PowerShell.exe -NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass' -Alias 'PoSH' #TSEnv for easily calling PowerShell in a TaskSequence
 Set-Var -Name 'SMSTSErrorDialogTimeout' -Value 360 #1440 #172800
 Set-Var -Name 'SMSTSPeerDownload' -Value 'True'
 Set-Var -Name 'SMSTSAssignUsersMode' -Value 'Auto'
@@ -722,7 +811,7 @@ $OutputVars = @('zTS_StartTimestamp','zTS_Hostname','zTS_ComputerName','zTS_OSDC
 # https://gallery.technet.microsoft.com/scriptcenter/ShowUI-showset-registered-7ad72ce0
 #OS Configuration:          Member Server
 #Domain:                    Contoso.com                                 HKLM:SYSTEM\CurrentControlSet\Services\TCPIP\Parameters, NV Domain
-#Logon Server:              \\VMFPPDC01                                 $env:LogonServer
+#Logon Server:              \\DC01                                 $env:LogonServer
 
 $SystemInfoLocalFile = Join-Path -Path $env:SystemRoot -ChildPath 'Logs\SystemInfo.txt'
 $OutputVarsMaxLength = ($OutputVars | Measure-Object -Maximum -Property Length).Maximum
