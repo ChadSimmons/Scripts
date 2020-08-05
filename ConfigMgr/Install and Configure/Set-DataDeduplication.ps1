@@ -23,10 +23,7 @@
 #region    ######################### Parameters and variable initialization ####
     [CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
     Param (
-        [Parameter(Mandatory=$true)]
-        [ValidateLength(1,1)]
-        [ValidatePattern('[d-zD-Z]')]
-        [ValidateScript({Test-Path "$_`:\" -PathType 'Container'})]
+        [Parameter(Mandatory=$true)][ValidateLength(1,1)][ValidatePattern('[d-zD-Z]')][ValidateScript({Test-Path "$_\" -PathType 'Container'})]
         [string]$Drive = 'E'
     )
     #region    ######################### Debug code
@@ -35,27 +32,34 @@
         #>
     #endregion ######################### Debug code
 
+If ($Drive -notlike '*:') { $Drive = $Drive + ':'}
+
 $CustomNoCompressionFileTypes = @('7z','mp3','mp4','mkv','jpg','png','zpaq','bak','wim')
 $IncludeFolders = @('SCCMContentLib','SMS_DP$',"SMSPKG$($Drive)$",'SMSPKGSIG','SMSSIG$','Backup','Install','Installs')
-$ExcludeFolders = (Get-ChildItem -Path "$Drive`:\" -Directory | Where-Object { $_.Name -notin $IncludeFolders }).Name  #All non-included root folders
+$ExcludeFolders = (Get-ChildItem -Path "$Drive\" -Directory | Where-Object { $_.Name -notin $IncludeFolders }).Name  #All non-included root folders
 #endregion #####################################################################
 
 try {
 	Write-Output 'Install the Windows feature'
 	Import-Module ServerManager
-	Add-WindowsFeature -Name FS-Data-Deduplication
+    $Result = Add-WindowsFeature -Name FS-Data-Deduplication
+    If ($Result.RestartNeeded -eq 'Yes') {
+        Write-Warning 'Restart Required'
+        break
+    }
     Write-Output 'Import PowerShell Module'
 	Import-Module Deduplication
 	Write-Output 'Enable on volume'
-	Enable-DedupVolume "$Drive`:"
+    Enable-DedupVolume $Drive
+
     try {
 	    Write-Output 'Set exclusions'
-	    Set-DedupVolume –Volume "$Drive`:" -ExcludeFolder @((Get-DedupVolume -Volume "$Drive`:" | Select-Object -ExpandProperty ExcludeFolder) + @($ExcludeFolders | ForEach-Object { "`\$_" }))
-        Set-DedupVolume –Volume "$Drive`:" -NoCompressionFileType @(@(Get-DedupVolume -Volume "$Drive`:" | Select-Object -ExpandProperty NoCompressionFileType) + $CustomNoCompressionFileTypes)
+        Set-DedupVolume –Volume $Drive -ExcludeFolder @((Get-DedupVolume -Volume $Drive | Select-Object -ExpandProperty ExcludeFolder) + @($ExcludeFolders | ForEach-Object { "`\$_" }))
+        Set-DedupVolume –Volume $Drive -NoCompressionFileType @(@(Get-DedupVolume -Volume $Drive | Select-Object -ExpandProperty NoCompressionFileType) + $CustomNoCompressionFileTypes)
 	    Write-Output 'Start deduplication and monitor progress'
-    	Start-DedupJob –Volume "$Drive`:" -Type Optimization -Preempt
-    	Get-DedupJob -Volume "$Drive`:"
-    	Get-DedupStatus -Volume "$Drive`:"
+    	Start-DedupJob –Volume $Drive -Type Optimization -Preempt
+    	Get-DedupJob -Volume $Drive
+    	Get-DedupStatus -Volume $Drive
     } catch {
 	    Write-Error $_
     }
@@ -64,7 +68,7 @@ try {
 }
 Write-Output 'Show the existing / built-in schedules'
 Get-DedupSchedule
-Get-DedupVolume -Volume "$Drive`:" | Select-Object -ExpandProperty NoCompressionFileType
-Get-DedupVolume -Volume "$Drive`:" | Select-Object -ExpandProperty ExcludeFolder
-Get-DedupVolume -Volume "$Drive`:" | Select-Object Volume, Enabled, MinimumFileAgeDays, MinimumFileSize, NoCompress, OptimizeInUseFiles, SavedSpace, SavingsRate, UnoptimizedSize, UsedSpace
+Get-DedupVolume -Volume $Drive | Select-Object -ExpandProperty NoCompressionFileType
+Get-DedupVolume -Volume $Drive | Select-Object -ExpandProperty ExcludeFolder
+Get-DedupVolume -Volume $Drive | Select-Object Volume, Enabled, MinimumFileAgeDays, MinimumFileSize, NoCompress, OptimizeInUseFiles, SavedSpace, SavingsRate, UnoptimizedSize, UsedSpace
 Write-Output "=== OPTIONAL ===`nSet-DedupSchedule -Name Daily -Cores 1 -Days @('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') -DurationHours 4 -Enabled -Memory 50 -Priority Low -StopWhenSystemBusy $true -Type Optimization -Start 01:45"
