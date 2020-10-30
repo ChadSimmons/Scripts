@@ -1,6 +1,6 @@
 ################################################################################
 #.SYNOPSIS
-#   Get-CMDeviceCollectionPrimaryEmailAddresses.ps1
+#   Get-MECMDeviceCollectionPrimaryEmailAddresses.ps1
 #   Get the Primary User and email for all computers in a ConfigMgr device collection
 #.DESCRIPTION
 #.PARAMETER SiteCode
@@ -14,13 +14,13 @@
 #.PARAMETER OutputFile
 #   Specifies the full path and file name of the CSV file receiving the script output
 #.EXAMPLE
-#   .\Get-CMDeviceCollectionPrimaryEmailAddresses.ps1 -CollectionID USA001D9 -OutputFile U:\USA001D9.csv
+#   .\Get-MECMDeviceCollectionPrimaryEmailAddresses.ps1 -CollectionID USA001D9 -OutputFile U:\USA001D9.csv
 #   Get the user information for a Collection ID and save the results to a CSV file
 #.EXAMPLE
-#   .\Get-CMDeviceCollectionPrimaryEmailAddresses.ps1 -CollectionName "All Active Computers" -OutputFile \\Server\Share\Folder\All_Active_Computers.csv
+#   .\Get-MECMDeviceCollectionPrimaryEmailAddresses.ps1 -CollectionName "All Active Computers" -OutputFile \\Server\Share\Folder\All_Active_Computers.csv
 #   Get the user information for a Collection name and save the results to a CSV file
 #.EXAMPLE
-#   .\Get-CMDeviceCollectionPrimaryEmailAddresses.ps1 -CollectionName "All Active Computers"
+#   .\Get-MECMDeviceCollectionPrimaryEmailAddresses.ps1 -CollectionName "All Active Computers"
 #   Get the user information for a Collection name and only show the results in the PowerShell console
 #.LINK
 #.NOTES
