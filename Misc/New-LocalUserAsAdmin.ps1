@@ -11,7 +11,7 @@
 #.EXAMPLE
 #   New-LocalUserAsAdmin.ps1 -ExpiresInHours 6 -UserID Chad
 #.NOTES
-#   - yyyy/mm/dd by Chad@ChadsTech.net - Created
+#   - 2021/02/03 by Chad.Simmons@CatapultSystems.com - Created
 ################################################################################
 
 param (
