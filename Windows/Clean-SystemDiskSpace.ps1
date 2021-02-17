@@ -1,13 +1,19 @@
 #requires -Version 2
 #Designed to work with PowerShell 2-5 to support Windows 7 - Windows 10 native PowerShell
-
-#Set-StrictMode -Version Latest #i.e. Option Explicit (all variables must be declared)
 ################################################################################
 #.SYNOPSIS
 #	Clean-SystemDiskSpace.ps1
 #	Remove known temp and unwanted files
 #.DESCRIPTION
-#   Old installs of Windows 7 may need http://support.microsoft.com/kb/2852386
+#   ===== How to use this script =====
+#   Run this script with administrative rights on Windows 7 SP1 and newer
+#      Old installs of Windows 7 may need http://support.microsoft.com/kb/2852386
+#
+#   The first section of cleanup tasks will always run, regardless of the amount of available free disk space on the system drive (C:)
+#   The second section of cleanup tasks will only run if insufficient free disk space on the system drive exists.
+#      Free disk space is evaluated before each cleanup task.  The tasks are ordered by priority/safety so less "risky"
+#      cleanup task are run first.
+#      Disable (comment out) tasks that are too risky or do not make sense in your environment.
 #.PARAMETER MinimumFreeMB
 #   Specifies the amount of free disk space the system drive (C:\) must have before ceasing to cleanup
 #   If not specified, 25 GB / 25600 MB will be used to support Windows 10 upgrades
@@ -458,7 +464,7 @@ Function Remove-DirectoryContents {
 	#Synopsis
 	#   Remove files from a folder/directory/path
 	#   Folders are ignored
-	#ENHANCEMENT: Handle in-use files
+	#	ENHANCEMENT: If delete fails, set to delete on restart (PendMovesEx)
 	param (
 		[Parameter(Mandatory = $true)][ValidateLength(4, 255)][String]$Path,
 		[Parameter()][ValidateLength(1, 255)][String[]]$Exclude,
@@ -655,7 +661,6 @@ If ([string]::IsNullOrEmpty($script:LogFile)) {
 	}
 }
 Start-Script
-
 #endregion ######################### Initialization ############################
 
 #region ############# Main Script ############################################## #BOOKMARK: Script Main
@@ -665,8 +670,7 @@ Write-LogMessage -Message "$('{0:n0}' -f $StartFreeMB) MB of free disk space exi
 Write-LogMessage -Message "When deleting temp files, only files created more than $FileAgeInDays days age should be removed"
 Write-LogMessage -Message "When deleting user profiles, only profiles not used in $ProfileAgeInDays days should be removed"
 
-#Cleanup items regardless of free space
-
+##################### Cleanup items regardless of free space ###################
 #Purge Windows memory dumps.  This is also handled in Disk Cleanup Manager
 Remove-File -FilePath (Join-Path -Path $env:SystemRoot -ChildPath 'memory.dmp')
 Remove-Directory -Path (Join-Path -Path $env:SystemRoot -ChildPath 'minidump')
@@ -681,16 +685,15 @@ If ($([Environment]::GetEnvironmentVariable('TEMP', 'Machine')) -ne (Join-Path -
 Remove-WUAFiles -Type 'Downloads' -CreatedMoreThanDaysAgo $FileAgeInDays
 Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 5
 
-#Compress Folders
-Compress-NTFSFolder #compact common NTFS folders
+#Compress/compact common NTFS folders
+Compress-NTFSFolder
 
-###############################################################################
 If (-not(Test-ShouldContinue)) { Write-LogMessage 'More than the minimum required disk space exists.  Exiting'; Exit 0 }
-
-If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in X days
+##################### Cleanup items if more free space is required #############
+If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in 30 days
 	Remove-CCMCacheContent -Type Package -ReferencedDaysAgo 30
 }
-If (Test-ShouldContinue) { #Purge ConfigMgr Client Application Cache items not referenced in X days
+If (Test-ShouldContinue) { #Purge ConfigMgr Client Application Cache items not referenced in 30 days
 	Remove-CCMCacheContent -Type Application -ReferencedDaysAgo 30
 }
 If (Test-ShouldContinue) { #Purge Windows upgrade temp and backup folders.  This is also handled in Disk Cleanup Manager
@@ -705,6 +708,9 @@ If (Test-ShouldContinue) { #Purge Windows upgrade temp and backup folders.  This
 }
 If (Test-ShouldContinue) { #Purge Windows Update Agent logs, downloads, and catalog
 	Remove-WUAFiles -Type 'EDB','Logs','Downloads' -CreatedMoreThanDaysAgo $FileAgeInDays
+}
+If (Test-ShouldContinue) { #Purge Windows Error Reporting files using Disk Cleanup Manager
+	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Windows Error Reporting Archive Files', 'Windows Error Reporting Files', 'Windows Error Reporting Queue Files', 'Windows Error Reporting System Archive Files', 'Windows Error Reporting System Queue Files', 'Windows Error Reporting Temp Files'
 }
 If (Test-ShouldContinue) { #Purge Component Based Service files
 	#.LINK http://powershell.com/cs/blogs/tips/archive/2016/06/01/cleaning-week-deleting-cbs-log-file.aspx
@@ -721,8 +727,6 @@ If (Test-ShouldContinue) { #Cleanup User Temp folders: Deletes anything in the T
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 	}
 	#ENHANCEMENT: Delete Outlook Temp Folder Files not modified in the last X days
-	# Remove items with exclusions # from https://deployhappiness.com/automatic-disk-cleanup-with-group-policy-and-sccm/
-	# Remove-Item -Recurse -Force c:\Users\*\AppData\Local\* -Exclude "Microsoft", "Google"
 }
 If (Test-ShouldContinue) { #Cleanup User Temporary Internet Files
 	# Removes all files and folders in user's Temporary Internet Files older then $DaysToDelete
@@ -731,94 +735,19 @@ If (Test-ShouldContinue) { #Cleanup User Temporary Internet Files
 	ForEach ($Path in $UserTempInternetFilesPaths) {
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 	}
-	#ENHANCEMENT: Purge Microsoft Internet Explorer Temp Files
-	#ENHANCEMENT: Purge Microsoft Edge Chromium Temp Files
-	#ENHANCEMENT: Purge Google Chrome Temp Files
-	#ENHANCEMENT: Purge Mozilla Firefox Temp Files
-<#
-if (Test-Path "C:\Users\*\AppData\Local\Microsoft\Windows\IECompatCache\") {
-        Remove-Item -Path "C:\Users\*\AppData\Local\Microsoft\Windows\IECompatCache\*" -Force -Recurse -Verbose -ErrorAction SilentlyContinue
-    } else {
-            Write-Host "C:\Users\*\AppData\Local\Microsoft\Windows\IECompatCache\ does not exist.                         " -NoNewline -ForegroundColor DarkGray
-            Write-Host "[WARNING]" -ForegroundColor DarkYellow -BackgroundColor Black
-    }
-
-    ## Cleans up Internet Explorer cache
-    if (Test-Path "C:\Users\*\AppData\Local\Microsoft\Windows\IECompatUaCache\") {
-        Remove-Item -Path "C:\Users\*\AppData\Local\Microsoft\Windows\IECompatUaCache\*" -Force -Recurse -Verbose -ErrorAction SilentlyContinue
-    } else {
-            Write-Host "C:\Users\*\AppData\Local\Microsoft\Windows\IECompatUaCache\ does not exist.                       " -NoNewline -ForegroundColor DarkGray
-            Write-Host "[WARNING]" -ForegroundColor DarkYellow -BackgroundColor Black
-    }
-
-    ## Cleans up Internet Cache
-    if (Test-Path "C:\Users\*\AppData\Local\Microsoft\Windows\INetCache\") {
-        Remove-Item -Path "C:\Users\*\AppData\Local\Microsoft\Windows\INetCache\*" -Force -Recurse -Verbose -ErrorAction SilentlyContinue
-    } else {
-            Write-Host "C:\Users\*\AppData\Local\Microsoft\Windows\INetCache\ does not exist.                             " -NoNewline -ForegroundColor DarkGray
-            Write-Host "[WARNING]" -ForegroundColor DarkYellow -BackgroundColor Black
-    }
-
-    ## Cleans up terminal server cache
-    if (Test-Path "C:\Users\*\AppData\Local\Microsoft\Terminal Server Client\Cache\") {
-        Remove-Item -Path "C:\Users\*\AppData\Local\Microsoft\Terminal Server Client\Cache\*" -Force -Recurse -Verbose -ErrorAction SilentlyContinue
-    } else {
-            Write-Host "C:\Users\*\AppData\Local\Microsoft\Terminal Server Client\Cache\ does not exist.                  " -NoNewline -ForegroundColor DarkGray
-            Write-Host "[WARNING]" -ForegroundColor DarkYellow -BackgroundColor Black
-    }
-#>
 }
-If (Test-ShouldContinue) {
-	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath 'Drivers')
+#ENHANCEMENT: Purge internet cache/temp files from Microsoft Edge Chromium, Google Chrome, Mozilla Firefox, Brave, Opera, etc.
+If (Test-ShouldContinue) { #Purge Content Indexer Cleaner using Disk Cleanup Manager
+	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Content Indexer Cleaner'
 }
-If (Test-ShouldContinue) {
+If (Test-ShouldContinue) { #Purge Device Driver Packages using Disk Cleanup Manager
+	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Device Driver Packages'
+}
+If (Test-ShouldContinue) { #Purge Windows Prefetch files
 	Remove-DirectoryContents -CreatedMoreThanDaysAgo 1 -Path (Join-Path -Path $env:SystemRoot -ChildPath 'Prefetch')
-
-	#ENHANCEMENT: Purge Offline Files Remove-Item -Recurse -Force "C:\Windows\CSC\v2.0.6\namespace\*" #Offline Files
-
-	#ENHANCEMENT: Purge Microsoft IIS Logfiles more than X days old
-	#See Clean-IIS*.ps1; Cleanup-IIS*.ps1; Clean-INETPub*.ps1; Cleanup-INETPub*.ps1
-	#Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path (Join-Path -Path $env:SystemDrive -ChildPath 'IIS....')
 }
-If (Test-ShouldContinue) { #Delete User Profiles over x days inactive
-	<#
-	.SYNOPSIS
-	Use Delprof2.exe to delete inactive profiles older than X days
-	.DESCRIPTION
-		StorageCleanUp\ProfileCleanup.ps1 from GARYTOWN.com WaaS_Scripts
-		Gets Top Console user from ConfigMgr Client WMI, then runs delprof tool, excluding top console user list,
-		and deletes any other inactive accounts based on how many days that you set in the -Days parameter.
-		typical arguments
-			l   List only, do not delete (what-if mode) - Set by default
-			u   Unattended (no confirmation) - Recommended to leave logs
-			q   Quiet (no output and no confirmation)
-	.LINK
-		https://garytown.com
-		https://helgeklein.com/free-tools/delprof2-user-profile-deletion-tool
-	#>
-	If (Test-Path -Path '.\DelProf2.exe' -PathType Leaf) { $DelProfCmd = '.\DelProf2.exe' }
-	If (Test-Path -Path '.\Tools\DelProf2.exe' -PathType Leaf) { $DelProfCmd = '.\Tools\DelProf2.exe' }
-	If ($DelProfCmd) {
-		$Argument = 'u' #'l'
-		$PrimaryUser = (Get-WmiObject -Namespace 'root\CIMv2\SMS' -Class SMS_SystemConsoleUser).SystemConsoleUser
-		Start-Process -FilePath "$DelProfCmd" -ArgumentList "/ed:$PrimaryUser /d:$ProfileAgeInDays /$argument" -Wait -Verb RunAs
-	} Else {
-		Write-LogMessage -Message 'DelProf2.exe not found'
-	}
-}
-If (Test-ShouldContinue) { #Cleanup WinSXS folder... requires reboot to finalize
-	Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
-    If ([Environment]::OSVersion.Version -lt (New-Object 'Version' 6,2)) {
-		Write-LogMessage -Message "Cleaning up Windows WinSXS folder using DISM online /Cleanup-Image /SpSuperseded"
-		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /SpSuperseded' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
-    } Else {
-		Write-LogMessage -Message "Cleaning up Windows WinSXS folder using DISM /online /Cleanup-Image /StartComponentCleanup /ResetBase"
-		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /StartComponentCleanup /ResetBase' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
-    }
-}
-If (Test-ShouldContinue) { #Run Disk Cleanup Manager with default safe settings
-	Start-CleanManager -WaitSeconds 600
-}
+#ENHANCEMENT: Purge Offline Files
+#ENHANCEMENT: Purge Microsoft IIS Logfiles more than X days old
 If (Test-ShouldContinue) { #Purge Delivery Optimization Files
 	try {
 		[int]$CacheBytes = (Get-DeliveryOptimizationStatus -ErrorAction Stop).FileSizeInCache
@@ -847,21 +776,63 @@ If (Test-ShouldContinue) { #Purge BranchCache
 		Start-CleanManager -WaitSeconds 120 -VolumeCaches 'BranchCache'
 	}
 }
-If (Test-ShouldContinue) { #Run Disk Cleanup Manager to purge Content Indexer Cleaner
-	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Content Indexer Cleaner'
+If (Test-ShouldContinue) { #Cleanup WinSXS folder... requires reboot to finalize
+	Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
+    If ([Environment]::OSVersion.Version -lt (New-Object 'Version' 6,2)) {
+		Write-LogMessage -Message "Cleaning up Windows WinSXS folder using DISM online /Cleanup-Image /SpSuperseded"
+		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /SpSuperseded' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
+    } Else {
+		Write-LogMessage -Message "Cleaning up Windows WinSXS folder using DISM /online /Cleanup-Image /StartComponentCleanup /ResetBase"
+		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /StartComponentCleanup /ResetBase' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
+    }
 }
-If (Test-ShouldContinue) { #Run Disk Cleanup Manager to purge Device Driver Packages
-	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Device Driver Packages'
-}
-If (Test-ShouldContinue) { #Run Disk Cleanup Manager to purge Windows Error Reporting files
-	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Windows Error Reporting Archive Files', 'Windows Error Reporting Files', 'Windows Error Reporting Queue Files', 'Windows Error Reporting System Archive Files', 'Windows Error Reporting System Queue Files', 'Windows Error Reporting Temp Files'
+If (Test-ShouldContinue) { #Run Disk Cleanup Manager with default safe settings
+	Start-CleanManager -WaitSeconds 600
 }
 If (Test-ShouldContinue) { #Purge System Restore Points
 	Write-LogMessage -Message 'Starting System Restore Point Cleanup'
 	Start-Process -FilePath "$env:SystemRoot\System32\VSSadmin.exe" -ArgumentList 'Delete Shadows', "/For=$env:SystemDrive",'/Oldest /Quiet' -Verb RunAs -Wait -WindowStyle Hidden -ErrorAction SilentlyContinue -PassThru
 }
-#TODO: Mark OneDrive files as cloud-only (on-demand)
-If (Test-ShouldContinue) { #purge Old items in Recycle Bin !!! BE CAREFUL !!!
+#ENHANCEMENT: Mark OneDrive files as cloud-only (on-demand)
+If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in 1 day
+	Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 1
+}
+If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in 3 days
+	Remove-CCMCacheContent -Type Package -ReferencedDaysAgo 3
+}
+If (Test-ShouldContinue) { #Purge ConfigMgr Client Application Cache items not referenced in 3 days
+	Remove-CCMCacheContent -Type Application -ReferencedDaysAgo 3
+}
+If (Test-ShouldContinue) { #Purge \Drivers folder
+	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath 'Drivers')
+}
+If (Test-ShouldContinue) { #Delete User Profiles over x days inactive
+	<#
+	.SYNOPSIS
+	Use Delprof2.exe to delete inactive profiles older than X days
+	.DESCRIPTION
+		StorageCleanUp\ProfileCleanup.ps1 from GARYTOWN.com WaaS_Scripts
+		Gets Top Console user from ConfigMgr Client WMI, then runs delprof tool, excluding top console user list,
+		and deletes any other inactive accounts based on how many days that you set in the -Days parameter.
+		typical arguments
+			l   List only, do not delete (what-if mode) - Set by default
+			u   Unattended (no confirmation) - Recommended to leave logs
+			q   Quiet (no output and no confirmation)
+	.LINK
+		https://garytown.com
+		https://helgeklein.com/free-tools/delprof2-user-profile-deletion-tool
+	#>
+	If (Test-Path -Path '.\DelProf2.exe' -PathType Leaf) { $DelProfCmd = '.\DelProf2.exe' }
+	If (Test-Path -Path '.\Tools\DelProf2.exe' -PathType Leaf) { $DelProfCmd = '.\Tools\DelProf2.exe' }
+	If ($DelProfCmd) {
+		$Argument = 'u' #'l'
+		$PrimaryUser = (Get-WmiObject -Namespace 'root\CIMv2\SMS' -Class SMS_SystemConsoleUser).SystemConsoleUser
+		Start-Process -FilePath "$DelProfCmd" -ArgumentList "/ed:$PrimaryUser /d:$ProfileAgeInDays /$argument" -Wait -Verb RunAs
+	} Else {
+		Write-LogMessage -Message 'DelProf2.exe not found'
+	}
+}
+If (Test-ShouldContinue) { #Purge Old items in Recycle Bin !!! BE CAREFUL !!!
 	#Clear entire Recycle Bin with Disk Cleanup Manager: Start-CleanManager -Wait -VolumeCaches 'Recycle Bin'
 	#Clear entire Recycle Bin with PowerShell v5: Clear-RecycleBin -DriveLetter "$env:SystemRoot\" -Force -Verbose
 	#ENHANCEMENT: Delete Recycle Bin items deleted more than x days ago
@@ -871,7 +842,7 @@ If (Test-ShouldContinue) { #purge Old items in Recycle Bin !!! BE CAREFUL !!!
 		#Remove-Item -Include $_.path -Force -Recurse
 	}
 }
-If ($script:HibernationEnabled -eq $true) {
+If ($script:HibernationEnabled -eq $true) { #re-enable Windows Hibernation
 	Enable-WindowsHibernation
 }
 #endregion ######################### Main Script ###############################
