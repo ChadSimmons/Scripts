@@ -6,10 +6,14 @@
 #   Add the local user account to the local Administrators group.
 #.PARAMETER UserID
 #   Specifies the User ID (User Name) to create or update
-#.PARAMETER ExpiresInHours
+#.PARAMETER GroupName
+#   Specifies the name of the local user group to add the user to
+#.PARAMETER PasswordNeverExpires
+#   Specifies the if the password should expire
+#.PARAMETER AccountExpiresInHours
 #   Specifies the number of hours the account will be active until it expires
 #.EXAMPLE
-#   New-LocalUserAsAdmin.ps1 -ExpiresInHours 6 -UserID Chad
+#   New-LocalUserAsAdmin.ps1 -AccountExpiresInHours 6 -UserID Chad
 #.NOTES
 #   - 2021/02/17 by Chad.Simmons@CatapultSystems.com - added support for PasswordNeverExpires and more
 #   - 2021/02/03 by Chad.Simmons@CatapultSystems.com - Created
