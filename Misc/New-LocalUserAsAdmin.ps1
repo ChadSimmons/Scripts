@@ -11,27 +11,33 @@
 #.EXAMPLE
 #   New-LocalUserAsAdmin.ps1 -ExpiresInHours 6 -UserID Chad
 #.NOTES
+#   - 2021/02/17 by Chad.Simmons@CatapultSystems.com - added support for PasswordNeverExpires and more
 #   - 2021/02/03 by Chad.Simmons@CatapultSystems.com - Created
 ################################################################################
 
 param (
-    [Parameter()][ValidatePattern('^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$')][string][string]$UserID,
-    [Parameter()][ValidateRange(1,168)][int]$ExpiresInHours = 4
+    [Parameter()][ValidatePattern('^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$')][string]$UserID,
+    [Parameter()][string]$GroupName = 'Administrators',
+    [Parameter()][bool]$PasswordNeverExpires = $false,
+    [Parameter()][ValidateRange(0,8760)][int16]$AccountExpiresInHours = 0
 )
 If ([string]::IsNullOrEmpty($UserID)) { $UserID = 'LocalUser' }
 Else { $UserID = 'Local_' + $UserID }
 
-$Password = ConvertTo-SecureString -String "$($env:ComputerName + '-' + [string](Get-Date -format 'yyyy-MM-dd'))" -AsPlainText -Force
+[string]$Password = "$($env:ComputerName + '-' + [string](Get-Date -Format 'yyyy-MM-dd'))"
+[System.Security.SecureString]$Password = ConvertTo-SecureString -String $Password -AsPlainText -Force
 
 If (-not(Get-LocalUser -Name "$UserID" -ErrorAction SilentlyContinue)) {
     Write-Verbose 'Creating local user'
-    try { $User = New-LocalUser -FullName 'Local Standard User' -Name "$UserID" -UserMayNotChangePassword -Password $Password } catch { throw $_ }
+    Try { $User = New-LocalUser -FullName 'Local Standard User' -Name "$UserID" -UserMayNotChangePassword -Password $Password } Catch { Throw $_ }
 }
 $User = Get-LocalUser -Name "$UserID" -ErrorAction SilentlyContinue
-If ($User) { 
-    try { Write-Verbose 'Setting AccountExpires'; Set-LocalUser -Name "$UserID" -AccountExpires $((Get-Date).AddHours($ExpiresInHours)) } catch { throw $_ }
-    #try { Write-Verbose 'Enabling local user'; [void](Enable-LocalUser -Name "$UserID") } catch { throw $_ }
-    try { Write-Verbose 'Adding local user to Administrators group'; Add-LocalGroupMember -Group 'Administrators' -Member "$UserID" -ErrorAction Stop; Write-Output "$UserID added to local Adminsitrators group" } 
-    catch [Microsoft.PowerShell.Commands.MemberExistsException] { Write-Output "$UserID is a member of the local Adminsitrators group" }
-    catch { throw $_ }
+If ($User) {
+	If ($AccountExpiresInHours -eq 0) { Try { Write-Verbose 'Setting AccountExpires'; Set-LocalUser -Name "$UserID" -AccountNeverExpires } Catch { Throw $_ } }
+	Else { Try { Write-Verbose 'Setting AccountExpires'; Set-LocalUser -Name "$UserID" -AccountExpires $((Get-Date).AddHours($ExpiresInHours)) } Catch { Throw $_ }	}
+	Try { Write-Verbose 'Setting PasswordNeverExpires'; Set-LocalUser -Name "$UserID" -PasswordNeverExpires $PasswordNeverExpires } Catch { Throw $_ }
+    Try { Write-Verbose 'Enabling local user'; [void](Enable-LocalUser -Name "$UserID") } Catch { } #throw $_ }
+    Try { Write-Verbose "Adding local user to $GroupName group"; Add-LocalGroupMember -Group "$GroupName" -Member "$UserID" -ErrorAction Stop; Write-Output "$UserID added to local $GroupName group" }
+    Catch [Microsoft.PowerShell.Commands.MemberExistsException] { Write-Output "$UserID is a member of the local $GroupName group" }
+    Catch { throw $_ }
 } Else { return 2 }
