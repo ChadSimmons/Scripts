@@ -2,8 +2,8 @@
 #Designed to work with PowerShell 2-5 to support Windows 7 - Windows 10 native PowerShell
 ################################################################################
 #.SYNOPSIS
-#	Clean-SystemDiskSpace.ps1
-#	Remove known temp and unwanted files
+#    Clean-SystemDiskSpace.ps1
+#    Remove known temp and unwanted files
 #.DESCRIPTION
 #   ===== How to use this script =====
 #   Run this script with administrative rights on Windows 7 SP1 and newer
@@ -39,28 +39,28 @@
 #   - 2017/06/09 by Chad.Simmons@CatapultSystems.com - Created
 #   - 2017/06/09 by Chad@ChadsTech.net - Created
 #   === To Do / Proposed Changes ===
-#	#ENHANCEMENT: Add ShouldProcess / WhatIf support
-#	#ENHANCEMENT: Log space savings summary (and per clean up group?) (file/folder count, MB)
-#	       from http://powershell.com/cs/blogs/tips/archive/2016/05/31/cleaning-week-deleting-log-file-backups.aspx
-#          and  http://powershell.com/cs/blogs/tips/archive/2016/05/30/cleaning-week-finding-fat-log-file-backups.aspx
-#	#ENHANCEMENT: Log action transactions in CSV
-#	#See additional TODO tags in the script body
+#   #ENHANCEMENT: Add ShouldProcess / WhatIf support
+#   #ENHANCEMENT: Log space savings summary (and per clean up group?) (file/folder count, MB)
+#      from http://powershell.com/cs/blogs/tips/archive/2016/05/31/cleaning-week-deleting-log-file-backups.aspx
+#      and  http://powershell.com/cs/blogs/tips/archive/2016/05/30/cleaning-week-finding-fat-log-file-backups.aspx
+#   #ENHANCEMENT: Log action transactions in CSV
+#   #See additional TODO tags in the script body
 #   ========== Additional References and Reading ==========
-#	- Microsoft CleanMgr https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cleanmgr
+#   - Microsoft CleanMgr https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cleanmgr
 #   - https://gregramsey.net/2014/05/14/automating-the-disk-cleanup-utility/
 #   - https://gallery.technet.microsoft.com/scriptcenter/How-to-Delete-the-912d772b#content
 #   - https://www.autoitscript.com/forum/topic/78893-automate-disk-cleanup-cleanmgrexe/
 #   - https://msdn.microsoft.com/en-us/library/windows/desktop/bb776782%28v=vs.85%29.aspx
 #   - https://social.technet.microsoft.com/Forums/systemcenter/en-US/c4fa8bbe-8aeb-4fc6-a5c6-b57c2680ac8a/vbscript-cleanmgr-for-all-users?forum=w7itprogeneral
 #   - https://serverfault.com/questions/545579/properly-remove-windows-old-on-hyper-v-server-2012-r2
-#	- https://garytown.com/clean-up-storage-pre-upgrade
+#   - https://garytown.com/clean-up-storage-pre-upgrade
 #   - https://www.jaapbrasser.com/diskcleanup-remove-previous-windows-versions-powershell-module/
-
-#	- http://powershell.com/cs/blogs/tips/archive/2016/05/27/cleaning-week-deleting-temp-files.aspx
+#   - http://powershell.com/cs/blogs/tips/archive/2016/05/27/cleaning-week-deleting-temp-files.aspx
 #   - http://powershell.com/cs/blogs/tips/archive/2016/05/26/cleaning-week-find-data-garbage.aspx
 #   - https://deployhappiness.com/automatic-disk-cleanup-with-group-policy-and-sccm
 #   - http://tdemeul.bunnybesties.org/2018/05/sccm-clear-ccmcache-remotely.html
-
+#   - https://support.microsoft.com/en-us/windows/free-up-space-for-windows-10-updates-429b12ba-f514-be0b-4924-ca6d16fa1d65
+#   - https://support.microsoft.com/en-us/windows/free-up-drive-space-in-windows-10-85529ccb-c365-490d-b548-831022bc9b32
 ################################################################################
 
 
