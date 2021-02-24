@@ -35,6 +35,7 @@
 #   ========== Keywords ==========
 #   Keywords: Free Disk Space Cleanup
 #   ========== Change Log History ==========
+#   - 2021/02/24 by Chad.Simmons@CatapultSystems.com - added logging free space every time it is checked
 #   - 2021/02/17 by Chad.Simmons@CatapultSystems.com - major rewrite
 #   - 2017/06/09 by Chad.Simmons@CatapultSystems.com - Created
 #   - 2017/06/09 by Chad@ChadsTech.net - Created
@@ -623,7 +624,9 @@ Function Get-FreeMB {
 }
 Function Test-ShouldContinue {
 	If ($MinimumFreeMB -eq 0) { $MinimumFreeMB = [int32]::MaxValue }
-	If ((Get-FreeMB) -lt $MinimumFreeMB) {
+	$FreeMB = Get-FreeMB
+	Write-LogMessage -Message "$('{0:n0}' -f $FreeMB) MB of free disk space exists"
+	If (($FreeMB) -lt $MinimumFreeMB) {
 		Return $true
 	} Else {
 		Return $false
