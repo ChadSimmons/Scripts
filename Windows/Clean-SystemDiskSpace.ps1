@@ -1,6 +1,6 @@
 #requires -Version 2
 #Designed to work with PowerShell 2-5 to support Windows 7 - Windows 10 native PowerShell
-################################################################################
+########################################################################################################################
 #.SYNOPSIS
 #    Clean-SystemDiskSpace.ps1
 #    Remove known temp and unwanted files
@@ -35,6 +35,7 @@
 #   ========== Keywords ==========
 #   Keywords: Free Disk Space Cleanup
 #   ========== Change Log History ==========
+#   - 2021/03/16 by Chad.Simmons@CatapultSystems.com - fixed code not compliante with PowerShell v2.0
 #   - 2021/02/24 by Chad.Simmons@CatapultSystems.com - added logging free space every time it is checked
 #   - 2021/02/17 by Chad.Simmons@CatapultSystems.com - major rewrite
 #   - 2017/06/09 by Chad.Simmons@CatapultSystems.com - Created
@@ -62,10 +63,8 @@
 #   - http://tdemeul.bunnybesties.org/2018/05/sccm-clear-ccmcache-remotely.html
 #   - https://support.microsoft.com/en-us/windows/free-up-space-for-windows-10-updates-429b12ba-f514-be0b-4924-ca6d16fa1d65
 #   - https://support.microsoft.com/en-us/windows/free-up-drive-space-in-windows-10-85529ccb-c365-490d-b548-831022bc9b32
-################################################################################
-
-
-#region    ######################### Parameters and variable initialization ####
+########################################################################################################################
+#region ############# Parameters and variable initialization ############################## #BOOKMARK: Script Parameters
 [CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 Param (
     [Parameter()][int32]$MinimumFreeMB = 25600, #25GB is generally needed to upgrade Windows 10
@@ -73,11 +72,11 @@ Param (
     [Parameter()][int16]$ProfileAgeInDays = 90, #age of user profiles to delete
 	[Parameter()]$LogFile #The default is determined automatically if not specified
 )
-#endregion ######################### Parameters and variable initialization ####
+#endregion ########## Parameters and variable initialization ###########################################################
 
-#region    ######################### Functions #################################
-################################################################################
-################################################################################
+#region ############# Functions ############################################################ #BOOKMARK: Script Functions
+########################################################################################################################
+########################################################################################################################
 Function Get-CurrentLineNumber {
 	If ($psISE) { $script:CurrentLine = $psISE.CurrentFile.Editor.CaretLine }
 	Else { $script:CurrentLine = $MyInvocation.ScriptLineNumber }
@@ -215,7 +214,7 @@ Function Start-Script ([string]$LogFile = $script:LogFile, [switch]$ArchiveExist
 	Write-Verbose "Logging to $($ScriptInfo.LogFile)"
 	If ($ArchiveExistingLogFile) { If (Get-command 'Backup-LogFile' -ErrorAction SilentlyContinue) { Backup-LogFile -LogFile $($ScriptInfo.LogFile) -Force } }
 	Else { If (Get-Command 'Backup-LogFile' -ErrorAction SilentlyContinue) { Backup-LogFile -LogFile $($ScriptInfo.LogFile) } }
-	Write-LogMessage -Message "==================== Starting script [$($script:ScriptInfo.FullPath)] at $($script:ScriptInfo.StartTime.ToString('F')) ===================="
+	Write-LogMessage -Message "==================== Starting script [$($ScriptInfo.FullPath)] at $(($ScriptInfo.StartTime).ToString('F')) ===================="
 	Write-LogMessage -Message "Logging to file [$LogFile]"
 	If ($WhatIfPreference) { Write-LogMessage -Message "     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========" -Type Warn }
 	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
@@ -277,7 +276,12 @@ Function Set-CleanManagerSettings {
 			'Windows Upgrade Log Files'
 	}
 	Write-LogMessage -Message "Setting values for HKLM:\$RegPath\ <NAME> \StateFlags$StateFlagsID" -Component $MyInvocation.MyCommand
-	((Get-ChildItem -Path "HKLM:\$RegPath").Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
+	#added to support PowerShell 2.0
+	$RegKeyNames = @()
+	$RegKeys = ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue) | Select-Object Name)
+	ForEach ($RegKey in $RegKeys) { $RegKeyNames += ($RegKey.Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') }
+	$RegKeyNames | ForEach-Object {
+	#Does not support PowerShell 2.0 ((Get-ChildItem -Path "HKLM:\$RegPath").Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
 		If ($VolumeCaches -contains $_) {
 			$VolumeCacheValue = 2
 		} Else {
@@ -295,22 +299,32 @@ Function Set-CleanManagerSettings {
 	}
 	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
 }
-Function Get-CleanManagerSettings ([string]$StateFlagsID = "2020") {
+Function Get-CleanManagerSettings ([string]$StateFlagsID = '2020') {
 	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID]"
 	$RegPath = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches'
 	Write-LogMessage -Message "Values for HKLM:\$RegPath\ <NAME> \StateFlags$StateFlagsID" -Component $MyInvocation.MyCommand -Verbose
+	#added to support PowerShell 2.0
+	$RegKeyNames = @()
+	$RegKeys = ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue) | Select-Object Name)
+	ForEach ($RegKey in $RegKeys) { $RegKeyNames += ($RegKey.Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') }
 	$VolumeCacheValues = @{}
-	((Get-ChildItem -Path "HKLM:\$RegPath").Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
+	#Does not support PowerShell 2.0 ((Get-ChildItem -Path "HKLM:\$RegPath").Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
+	$RegKeyNames | ForEach-Object {
 		$VolumeCacheValues.add("$_", (Get-ItemProperty -Path "HKLM:\$RegPath\$_" -Name "StateFlags$StateFlagsID" -ErrorAction SilentlyContinue)."StateFlags$StateFlagsID")
 	}
 	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
 	Return $VolumeCacheValues.GetEnumerator() | Sort-Object Name
 }
-Function Remove-CleanManagerSettings ([string]$StateFlagsID = "2020") {
+Function Remove-CleanManagerSettings ([string]$StateFlagsID = '2020') {
 	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID]"
 	$RegPath = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches'
 	Write-LogMessage -Message "Removing HKLM:\$RegPath\ <NAME> \StateFlags$StateFlagsID" -Component $MyInvocation.MyCommand
-	((Get-ChildItem -Path "HKLM:\$RegPath").Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
+	#added to support PowerShell 2.0
+	$RegKeyNames = @()
+	$RegKeys = ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue) | Select-Object Name)
+	ForEach ($RegKey in $RegKeys) { $RegKeyNames += ($RegKey.Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') }
+	$RegKeyNames | ForEach-Object {
+	#Does not support PowerShell 2.0 ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue).Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
 		try {
 			Remove-ItemProperty -Path "HKLM:\$RegPath\$_" -Name "StateFlags$StateFlagsID" -ErrorAction SilentlyContinue
 		} catch {
@@ -353,7 +367,7 @@ Function Start-CleanManager ([string]$StateFlagsID = $(Get-Date -f 'HHmm'), [str
 	#cleanmgr.exe /LowDisk
 	#cleanmgr.exe /VeryLowDisk
 	$Process = Start-Process -FilePath "$env:SystemRoot\System32\CleanMgr.exe" -ArgumentList $ArgumentList -Verb RunAs -PassThru -WindowStyle Hidden -ErrorAction SilentlyContinue
-	If ($WaitSeconds -gt 0) { #Create a progress bar to show that we are waiting for the processes to complete
+	If ($Process -and $WaitSeconds -gt 0) { #Create a progress bar to show that we are waiting for the processes to complete
 		$iCounter = 1
 		do {
 			Write-Progress -Activity "Running Disk Cleanup Manager" -Status "Waiting until $(Get-Date -Date (Get-Date).AddSeconds($WaitSeconds) -Format t) for completion" -PercentComplete $iCounter
@@ -478,7 +492,7 @@ Function Remove-DirectoryContents {
 	} Else {
 		If (Test-Path -Path $Path -PathType Container) {
 			Write-LogMessage -Message "Removing files created more than $CreatedMoreThanDaysAgo days ago from directory [$Path]"
-			$FileList = Get-ChildItem -Path $Path -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { ($_.CreationTime -lt $(Get-Date).AddDays(-$CreatedMoreThanDaysAgo) -and $_.PSIsContainer -eq $false) }
+			$FileList = Get-ChildItem -Path $Path -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { ($_.CreationTime -lt $(Get-Date).AddDays(-$CreatedMoreThanDaysAgo) -and $_.PSIsContainer -eq $false) }
 			ForEach ($File in $FileList) {
 				If ($Exclude -contains $File.Name) {
 					Write-LogMessage -Message "[$($File.Name)] is excluded from removal" -Type Warn
@@ -632,11 +646,12 @@ Function Test-ShouldContinue {
 		Return $false
 	}
 }
-################################################################################
-################################################################################
-#endregion ######################### Functions #################################
+########################################################################################################################
+########################################################################################################################
+#endregion ########## Functions ########################################################################################
 
-#region ############# Initialize ############################################### #BOOKMARK: Script Initialize
+
+#region ############# Initialize ########################################################## #BOOKMARK: Script Initialize
 $ScriptStartTime = $(Get-Date) #-Description 'The date and time the script completed'
 
 #Detect process elevation / process is running with administrative rights:
@@ -664,9 +679,9 @@ If ([string]::IsNullOrEmpty($script:LogFile)) {
 	}
 }
 Start-Script
-#endregion ######################### Initialization ############################
+#endregion ########## Initialization ###################################################################################
 
-#region ############# Main Script ############################################## #BOOKMARK: Script Main
+#region ############# Main Script ############################################################### #BOOKMARK: Script Main
 Write-LogMessage -Message "Attempting to get $('{0:n0}' -f $MinimumFreeMB) MB free on the $env:SystemDrive drive"
 $StartFreeMB = Get-FreeMB
 Write-LogMessage -Message "$('{0:n0}' -f $StartFreeMB) MB of free disk space exists before cleanup"
@@ -733,9 +748,10 @@ If (Test-ShouldContinue) { #Cleanup User Temp folders: Deletes anything in the T
 }
 If (Test-ShouldContinue) { #Cleanup User Temporary Internet Files
 	# Removes all files and folders in user's Temporary Internet Files older then $DaysToDelete
-	$UserTempInternetFilesPaths = Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Windows\Temporary Internet Files\*" -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
 	Write-LogMessage -Message 'Cleanup User Temporary Internet Files'
+	$UserTempInternetFilesPaths = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Windows\Temporary Internet Files\*" -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) })
 	ForEach ($Path in $UserTempInternetFilesPaths) {
+		Write-LogMessage -Message "Running function Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $($Path.FullName)"
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 	}
 }
@@ -806,7 +822,7 @@ If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not refer
 If (Test-ShouldContinue) { #Purge ConfigMgr Client Application Cache items not referenced in 3 days
 	Remove-CCMCacheContent -Type Application -ReferencedDaysAgo 3
 }
-If (Test-ShouldContinue) { #Purge \Drivers folder
+If (Test-ShouldContinue) { #Purge C:\Drivers folder
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath 'Drivers')
 }
 If (Test-ShouldContinue) { #Delete User Profiles over x days inactive
@@ -841,15 +857,16 @@ If (Test-ShouldContinue) { #Purge Old items in Recycle Bin !!! BE CAREFUL !!!
 	#ENHANCEMENT: Delete Recycle Bin items deleted more than x days ago
 	$Recycler = (New-Object -ComObject Shell.Application).NameSpace(0xa)
 	$Recycler.items() | ForEach-Object {
-		Remove-File -FilePath $_.path -CreatedMoreThanDaysAgo 8
+		#TODO: REMOVE COMMENT TO ENABLE!!! Remove-File -FilePath $_.path -CreatedMoreThanDaysAgo 8
 		#Remove-Item -Include $_.path -Force -Recurse
 	}
 }
 If ($script:HibernationEnabled -eq $true) { #re-enable Windows Hibernation
 	Enable-WindowsHibernation
 }
-#endregion ######################### Main Script ###############################
-#region    ######################### Deallocation ##############################
+#endregion ########## Main Script ######################################################################################
+
+#region ############# Finalization ########################################################## #BOOKMARK: Script Finalize
 $EndFreeMB = Get-FreeMB
 Write-LogMessage -Message "$('{0:n0}' -f $($EndFreeMB - $StartFreeMB)) MB of space were cleaned up"
 Write-LogMessage -Message "$('{0:n0}' -f $EndFreeMB) MB of free disk space exists after cleanup"
@@ -858,4 +875,4 @@ If ((Get-FreeMB) -lt $MinimumFreeMB) {
 	Write-LogMessage -Message "WARNING: the minimum amount of free disk space of $('{0:n0}' -f $MinimumFreeMB) MB could not be achieved." -Type Warning
 } Else { $ReturnCode = 0 }
 Stop-Script -ReturnCode $ReturnCode
-#endregion ######################### Deallocation ##############################
+#endregion ########## Finalization #####################################################################################
