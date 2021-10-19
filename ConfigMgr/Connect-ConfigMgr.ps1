@@ -33,7 +33,7 @@
         # If SiteCode was not specified detect it
         If ([string]::IsNullOrEmpty($SiteCode)) {
             try {
-                $SiteCode  = (Get-PSDrive -PSProvider -ErrorAction Stop CMSITE).Name
+                $SiteCode  = (Get-PSDrive -PSProvider CMSite -ErrorAction Stop).Name
             } catch {
                 Throw $_
             }
