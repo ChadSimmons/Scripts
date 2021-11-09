@@ -1,13 +1,13 @@
-'region    Comment Based Help ##################################################
+'region    Comment Based Help ##########################################################################################
 Option Explicit
 On Error Resume Next
 Dim H
 H = H & vbCRLF & "###############################################################################"
 H = H & vbCRLF & ".SYNOPSIS"
 H = H & vbCRLF & "   ScriptFileName.vbs"
-H = H & vbCRLF & "   A brief description of the function or script. This keyword can be used only once in each topic."
+H = H & vbCRLF & "   A brief description of the function or script"
 H = H & vbCRLF & ".DESCRIPTION"
-H = H & vbCRLF & "   A detailed description of the function or script. This keyword can be used only once in each topic."
+H = H & vbCRLF & "   A detailed description of the function or script"
 H = H & vbCRLF & ".PARAMETER <name>"
 H = H & vbCRLF & "   Specifies <xyz>"
 H = H & vbCRLF & "   /NAME:<xyz>"
@@ -19,21 +19,22 @@ H = H & vbCRLF & "   Link Title: http://contoso.com/ScriptFileName.txt"
 H = H & vbCRLF & "   The name of a related topic. The value appears on the line below the .LINE keyword and must be preceded by a comment symbol (#) or included in the comment block."
 H = H & vbCRLF & "   Repeat the .LINK keyword for each related topic."
 H = H & vbCRLF & "   This content appears in the Related Links section of the help topic."
-H = H & vbCRLF & "   The Link keyword content can also include a Uniform Resource Identifier (URI) to an online version of the same help topic. The online version  opens when you use the Online parameter of Get-Help. The URI must begin with "http" or "https"."
+H = H & vbCRLF & "   The Link keyword content can also include a Uniform Resource Identifier (URI) to an online version of the same help topic. The online version  opens when you use the Online parameter of Get-Help. The URI must begin with 'http' or 'https'."
 H = H & vbCRLF & ".NOTES"
-H = H & vbCRLF & "   This script is maintained at https://github.com/ChadSimmons/Scripts"
-H = H & vbCRLF & "   Additional information about the function or script."
-H = H & vbCRLF & "   ========== Keywords =========="
+H = H & vbCRLF & "   This script is maintained at ?????????????????????????????????????????????????????????????????????"
+H = H & vbCRLF & "   Additional information about the function or script"
+H = H & vbCRLF & "   ========== Keywords ========================="
 H = H & vbCRLF & "   Keywords: ???"
-H = H & vbCRLF & "   ========== Change Log History =========="
-H = H & vbCRLF & "   - yyyy/mm/dd by Chad Simmons - Modified $ChangeDescription$"
-H = H & vbCRLF & "   - yyyy/mm/dd by Chad.Simmons@CatapultSystems.com - Created"
-H = H & vbCRLF & "   - yyyy/mm/dd by Chad@ChadsTech.net - Created"
-H = H & vbCRLF & "   === To Do / Proposed Changes ==="
-H = H & vbCRLF & "   - TODO: None"
-H = H & vbCRLF & "   ========== Additional References and Reading =========="
+H = H & vbCRLF & "   ========== Change Log History ==============="
+H = H & vbCRLF & "   - YYYY/MM/DD by name@contoso.com - ~updated description~"
+H = H & vbCRLF & "   - YYYY/MM/DD by name@contoso.com - created"
+H = H & vbCRLF & "   ========== To Do / Proposed Changes ========="
+H = H & vbCRLF & "   - #TODO: None"
+H = H & vbCRLF & "   ===== Additional References and Reading ====="
 H = H & vbCRLF & "   - <link title>: https://domain.url"
-H = H & vbCRLF & "###############################################################################"
+H = H & vbCRLF & "#####################################################################################################"
+
+
 'Display Help if requested
 Dim strArg, colArgs : Set colArgs = WScript.Arguments.Named
 For Each strArg in colArgs
