@@ -54,7 +54,8 @@ Function Write-LogMessageSE {
 	param ($Message, [ValidateSet('Error','Warn','Warning','Info','Information','1','2','3')]$Type='1', $LogFile=$global:LogFile)
 	If (!(Test-Path 'variable:global:LogFile')){$global:LogFile=$LogFile}
 	Switch($Type){ {@('2','Warn','Warning') -contains $_}{$Type=2}; {@('3','Error') -contains $_}{$Type=3}; Default{$Type=1} }
-	"<![LOG[$Message]LOG]!><time=`"$(Get-Date -F HH:mm:ss.fff)+000`" date=`"$(Get-Date -F "MM-dd-yyyy")`" component=`" `" context=`" `" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile -WhatIf:$false
+	try { Add-Content -Path $LogFile -Encoding UTF8 -WhatIf:$false -Confirm:$false -Value "<![LOG[$Message]LOG]!><time=`"$(Get-Date -F HH:mm:ss.fff)+000`" date=`"$(Get-Date -F 'MM-dd-yyyy')`" component=`" `" context=`" `" type=`"$Type`" thread=`"$PID`" file=`"`">" -ErrorAction Stop
+	} catch { Write-Warning -Message "Unable to append log [$LogFile] with message [$Message]" }
 } Set-Alias -Name Write-LogMessage -Value Write-LogMessageSE
 ################################################################################
 ################################################################################
@@ -81,7 +82,7 @@ $myVariables = [ordered]@{}
 
 #region Get Task Sequence Variables, removing exclusions, and suppressing long and uninteresting values (if not verbose)
 ForEach ($TSVariable in $TSenv.GetVariables()) {
-    $TSValue = $TSenv[$TSVariable]
+    $TSValue = $TSenv[$TSVariable] #$TSenv.value("$TSVariable")
     ForEach ($VariableExcluded in $VariablesExcluded) {
         If ($TSVariable -like $VariableExcluded) {
             $TSValue = '~Excluded~'

@@ -35,7 +35,8 @@
 #   ========== Keywords ==========
 #   Keywords: Free Disk Space Cleanup
 #   ========== Change Log History ==========
-#   - 2021/03/16 by Chad.Simmons@CatapultSystems.com - fixed code not compliante with PowerShell v2.0
+#   - 2022/02/02 by Chad.Simmons@CatapultSystems.com - updated logging to mirror SMSTS logging groups, actions, and other common filters/highlights
+#   - 2021/03/16 by Chad.Simmons@CatapultSystems.com - fixed code not compliant with PowerShell v2.0
 #   - 2021/02/24 by Chad.Simmons@CatapultSystems.com - added logging free space every time it is checked
 #   - 2021/02/17 by Chad.Simmons@CatapultSystems.com - major rewrite
 #   - 2017/06/09 by Chad.Simmons@CatapultSystems.com - Created
@@ -92,7 +93,7 @@ Function Get-ScriptInfo ([string]$ScriptFile = $ScriptFullPath) {
 	#   Sets global variables for ScriptStartTime, ScriptNameAndPath, ScriptPath, ScriptName, ScriptBaseName, and ScriptLog
 	#   This function works inline or in a dot-sourced script
 	#   See snippet Get-ScriptInfo.ps1 for excruciating details and alternatives
-	Write-Verbose -Message "Start Function: $(Get-CurrentFunctionName) -FullPath [$ScriptFile]"
+	Write-Verbose -Message "The group ($(Get-CurrentFunctionName) -FullPath [$ScriptFile]) started"
 	If (Test-Path -LiteralPath variable:script:ScriptInfo) {
 		Write-Verbose 'ScriptInfo already set.  Resetting Times'
 		$ScriptInfo.StartTime = $(Get-Date)
@@ -139,7 +140,7 @@ Function Get-ScriptInfo ([string]$ScriptFile = $ScriptFullPath) {
 		Add-Member -InputObject $script:ScriptInfo -MemberType NoteProperty -Name 'PowerShellVersion' -Value $($PSversionTable.PSversion.toString())
 		Add-Member -InputObject $script:ScriptInfo -MemberType NoteProperty -Name 'TimezoneBias' -Value $TimezoneBias
 	}
-	Write-Verbose -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-Verbose -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
 Function Write-LogMessage {
 	#.Synopsis Write a log entry in CMtrace format
@@ -194,7 +195,7 @@ Function Start-Script ([string]$LogFile = $script:LogFile, [switch]$ArchiveExist
 	#Required: Get-ScriptInfo(), Write-LogMessage()
 	#if the ScriptLog is undefined set to script ScriptLog
 	#if the ScriptLog is still undefined set to <WindowsDir>\Logs\Script.log
-	Write-Verbose -Message "Start Function: (Get-CurrentFunctionName) -LogFile [$LogFile]"
+	Write-Verbose -Message "The group ($(Get-CurrentFunctionName) -LogFile [$LogFile]) started"
 	If (-not($ScriptInfo -is [object])) {
 		Get-ScriptInfo -FullPath $(If (Test-Path -LiteralPath 'variable:HostInvocation') { $HostInvocation.MyCommand.Definition } Else { $MyInvocation.MyCommand.Definition })
 	}
@@ -217,11 +218,11 @@ Function Start-Script ([string]$LogFile = $script:LogFile, [switch]$ArchiveExist
 	Write-LogMessage -Message "==================== Starting script [$($ScriptInfo.FullPath)] at $(($ScriptInfo.StartTime).ToString('F')) ===================="
 	Write-LogMessage -Message "Logging to file [$LogFile]"
 	If ($WhatIfPreference) { Write-LogMessage -Message "     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========" -Type Warn }
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
 Function Stop-Script ($ReturnCode) {
 	#Required: Get-ScriptInfo(), Write-LogMessage()
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -ReturnCode [$ReturnCode]"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName) -ReturnCode [$ReturnCode]) started"
 	If ($WhatIfPreference) { Write-LogMessage -Message "     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========" -Type Warn }
 	Write-LogMessage -Message "Exiting with return code $ReturnCode"
 	$ScriptInfo.EndTime = $(Get-Date) #-Description 'The date and time the script completed'
@@ -230,9 +231,9 @@ Function Stop-Script ($ReturnCode) {
 	#Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
 	Write-LogMessage -Message "==================== Completed script [$($ScriptInfo.FullPath)] at $(Get-Date -Format 'F') ====================" -Console
 	Write-Verbose -Message $('ScriptInfo Custom PSObject...' + $($ScriptInfo | Format-List | Out-String))
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 	Exit $ReturnCode
 }
-
 Function Set-CleanManagerSettings {
 	#.SYNOPSIS
 	#	Update registry with Disk Cleanup Manager settings
@@ -242,7 +243,7 @@ Function Set-CleanManagerSettings {
 		[string]$StateFlagsID = '2020', #any value
 		[string[]]$VolumeCaches #array of items to clean
 	)
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID]"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID] started"
 	$RegPath = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches'
 	If ($VolumeCaches -eq $true) {
 		Write-LogMessage -Message 'Getting all supported items'
@@ -297,10 +298,10 @@ Function Set-CleanManagerSettings {
 			Write-LogMessage -Message "FAILED setting $_ to $VolumeCacheValue with error $($error[0])" -Component $MyInvocation.MyCommand
 		}
 	}
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) completed"
 }
 Function Get-CleanManagerSettings ([string]$StateFlagsID = '2020') {
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID]"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID] started"
 	$RegPath = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches'
 	Write-LogMessage -Message "Values for HKLM:\$RegPath\ <NAME> \StateFlags$StateFlagsID" -Component $MyInvocation.MyCommand -Verbose
 	#added to support PowerShell 2.0
@@ -312,11 +313,11 @@ Function Get-CleanManagerSettings ([string]$StateFlagsID = '2020') {
 	$RegKeyNames | ForEach-Object {
 		$VolumeCacheValues.add("$_", (Get-ItemProperty -Path "HKLM:\$RegPath\$_" -Name "StateFlags$StateFlagsID" -ErrorAction SilentlyContinue)."StateFlags$StateFlagsID")
 	}
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) completed"
 	Return $VolumeCacheValues.GetEnumerator() | Sort-Object Name
 }
 Function Remove-CleanManagerSettings ([string]$StateFlagsID = '2020') {
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID]"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID] started"
 	$RegPath = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches'
 	Write-LogMessage -Message "Removing HKLM:\$RegPath\ <NAME> \StateFlags$StateFlagsID" -Component $MyInvocation.MyCommand
 	#added to support PowerShell 2.0
@@ -331,10 +332,10 @@ Function Remove-CleanManagerSettings ([string]$StateFlagsID = '2020') {
 			Write-LogMessage -Message "FAILED removing HKLM:\$RegPath\$_\StateFlags$StateFlagsID" -Component $MyInvocation.MyCommand
 		}
 	}
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) completed"
 }
 Function Start-CleanManager ([string]$StateFlagsID = $(Get-Date -f 'HHmm'), [string[]]$VolumeCaches, [int]$WaitSeconds = 300) {
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID] -Wait [$Wait]"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID] -Wait [$Wait]) started"
 	If (-not($PSBoundParameters.ContainsKey('VolumeCaches'))) { #set safe defaults
 		$VolumeCaches = 'D3D Shader Cache',
 		'Downloaded Program Files',
@@ -362,7 +363,7 @@ Function Start-CleanManager ([string]$StateFlagsID = $(Get-Date -f 'HHmm'), [str
 	#Get-CleanManagerSettings -StateFlagsID $StateFlagsID | Format-Table -AutoSize
 
 	$ArgumentList = "/sagerun:$StateFlagsID", "/d $env:SystemDrive"
-	Write-LogMessage -Message "Running cleanmgr.exe $ArgumentList" -Component $MyInvocation.MyCommand
+	Write-LogMessage -Message "Executing command line: CleanMgr.exe $ArgumentList" -Component $MyInvocation.MyCommand
 	#cleanmgr.exe /AUTOCLEAN
 	#cleanmgr.exe /LowDisk
 	#cleanmgr.exe /VeryLowDisk
@@ -385,10 +386,10 @@ Function Start-CleanManager ([string]$StateFlagsID = $(Get-Date -f 'HHmm'), [str
 	#	$UpdateCleanupSuccessful = Select-String -Path $env:SystemRoot\Logs\CBS\DeepClean.log -Pattern 'Total size of superseded packages:' -Quiet
 	#}
 	Remove-CleanManagerSettings -StateFlagsID $StateFlagsID
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName) completed"
 }
 Function Get-CriticalPaths {
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) started"
 	$PathList = @()
 	$PathList += $env:SystemDrive
 	$PathList += $env:SystemRoot
@@ -405,7 +406,7 @@ Function Get-CriticalPaths {
 	$PathList += $env:HOMEDRIVE + $env:HOMEPATH
 	$PathList += $env:USERPROFILE
 	$PathList += Split-Path -Path $env:USERPROFILE -Parent
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) completed"
 	Return $PathList
 }
 Function Remove-File {
@@ -426,7 +427,7 @@ Function Remove-File {
 			Write-LogMessage -Message "Attempting to remove [$([math]::Round($File.length/1mb,1)) MB] file [$FilePath]"
 			try {
 				Remove-Item -Path $FilePath -Force -ErrorAction Stop
-				Write-LogMessage -Message "Removed file [$FilePath]"
+				Write-LogMessage -Message "The action: Remove File [$FilePath] succeeded"
 			} Catch {
 				Try {
 					#take ownership
@@ -434,9 +435,9 @@ Function Remove-File {
 					Start-Process -FilePath "$env:SystemRoot\System32\icacls.exe" -ArgumentList "`"$FilePath`"", '/T', '/grant', 'administrators:F' -Wait -Verb RunAs -ErrorAction Stop
 					Write-LogMessage -Message "Took ownership of file [$FilePath]"
 					Remove-Item -Path $FilePath -Force -ErrorAction Stop
-					Write-LogMessage -Message "Removed file [$FilePath]"
+					Write-LogMessage -Message "The action: Remove File [$FilePath] succeeded"
 				} Catch {
-					Write-LogMessage -Message "Failed to remove file [$FilePath]" -Type Warn
+					Write-LogMessage -Message "The action: Remove File [$FilePath] failed" -Type Warn
 				}
 			}
 		}
@@ -457,16 +458,16 @@ Function Remove-Directory {
 			Write-LogMessage -Message "Attempting to remove [$([math]::Round($FolderSize/1mb,1)) MB] directory [$Path]"
 			try {
 				Remove-Item -Path "$Path" -Recurse -Force -ErrorAction Stop
-				Write-LogMessage -Message "Removed directory [$Path]"
+				Write-LogMessage -Message "The action: Remove Directory [$Path] succeeded"
 			} Catch {
 				try {
 					Write-LogMessage -Message "Taking ownership of directory [$Path]"
 					Start-Process -FilePath "$env:WinDir\System32\takeown.exe" -ArgumentList '/F', "`"$Path`"", '/R', '/A', '/D', 'Y' -Wait -Verb RunAs -ErrorAction Stop
 					Start-Process -FilePath "$env:WinDir\System32\icacls.exe" -ArgumentList "`"$Path`"", '/T', '/grant', 'administrators:F' -Wait -Verb RunAs -ErrorAction Stop
 					Remove-Item -Path "$Path" -Force -ErrorAction SilentlyContinue
-					Write-LogMessage -Message "Removed directory [$Path]"
+					Write-LogMessage -Message "The action: Remove Directory [$Path] succeeded"
 				} catch {
-					Write-LogMessage -Message "Failed to remove directory [$Path]" -Type Warn
+					Write-LogMessage -Message "The action: Remove Directory [$Path] failed" -Type Warn
 				}
 			}
 		} Else {
@@ -500,7 +501,8 @@ Function Remove-DirectoryContents {
 					Remove-File -FilePath $File.FullName -CreatedMoreThanDaysAgo $CreatedMoreThanDaysAgo
 				}
 			}
-			Write-LogMessage -Message "Removed $i files from [$Path]" -Type Warn
+			Write-LogMessage -Message "The action: Remove Directory Contents [$Path] Removed $i files"
+
 		} Else {
 			Write-LogMessage -Message "Not attempting to remove files from nonexistent directory [$Path]"
 		}
@@ -518,7 +520,7 @@ Function Remove-CCMCacheContent {
 		[Parameter()][ValidateSet('All', 'SoftwareUpdate', 'Application', 'Package')][string]$Type = 'SoftwareUpdate',
 		[Parameter()][int16]$ReferencedDaysAgo = 5
 	)
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) started"
 	try {
 		$UIResourceMgr = New-Object -ComObject UIResource.UIResourceMgr
 		$CMCacheObjects = $UIResourceMgr.GetCacheInfo()
@@ -544,7 +546,8 @@ Function Remove-CCMCacheContent {
 			}
 		}
 		ForEach ($CacheElement in $CCMCacheItems) {
-			Write-LogMessage -Message "Found ConfigMgr client cache content in folder [$($CacheElement.Location)] Last referenced [$($CacheElement.LastReferenceTime)] totaling [$([math]::Round(($CacheElement.ContentSize)/1KB,1)) MB]"
+			#Write-LogMessage -Message "Found ConfigMgr client cache content in folder [$($CacheElement.Location)] Last referenced [$($CacheElement.LastReferenceTime)] totaling [$([math]::Round(($CacheElement.ContentSize)/1KB,1)) MB]"
+			Write-LogMessage -Message "Found ConfigMgr client cache content in folder [$($CacheElement.Location)] Last referenced [$(Get-Date -Date $CacheElement.LastReferenceTime -Format 'yyyy/MM/dd HH:mm:ss')] totaling [$([math]::Round(($CacheElement.ContentSize)/1KB,1)) MB]"
 			try {
 				$CMCacheObjects.DeleteCacheElement($CacheElement.CacheElementID)
 				Write-LogMessage -Message "Removed ConfigMgr client cache ID $($CacheElement.CacheElementID)"
@@ -555,14 +558,14 @@ Function Remove-CCMCacheContent {
 	} catch {
 		Write-LogMessage -Message "Could not connect to ConfigMgr client UI Resource Manager" -Type Warn
 	}
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
 Function Remove-WUAFiles {
 	param (
 		[Parameter()][string[]]$Type = 'Downloads',
 		[Parameter()][int16]$CreatedMoreThanDaysAgo = 8
 	)
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName) -Type [$Type] -CreatedMoreThanDaysAgo [$CreatedMoreThanDaysAgo]"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName) -Type [$Type] -CreatedMoreThanDaysAgo [$CreatedMoreThanDaysAgo]) started"
 	$WUAservice = Get-Service -Name wuauserv
 	If ($WUAservice.Status -eq 'Running') {
 		Stop-Service -Name wuauserv
@@ -581,37 +584,39 @@ Function Remove-WUAFiles {
 	If ($WUAservice.Status -eq 'Running') {
 		Start-Service -Name wuauserv
 	}
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
 Function Disable-WindowsHibernation {
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) started"
 	$File = (Join-Path -Path $env:SystemDrive -ChildPath 'hiberfil.sys')
 	If (Test-Path -Path $File -PathType Leaf) {
 		$script:HibernationEnabled = $true
+		Write-LogMessage -Message "Executing command line: $(Join-Path -Path $env:SystemRoot -ChildPath 'System32\powercfg.exe') -h OFF"
 		try {
 			Start-Process -FilePath (Join-Path -Path $env:SystemRoot -ChildPath 'System32\powercfg.exe') -ArgumentList '-h OFF' -Wait -ErrorAction Stop -NoNewWindow -Verb RunAs
-			Write-LogMessage -Message "Disabling Windows Hibernation and deleting the file [$File]"
+			Write-LogMessage -Message "Disabling Windows Hibernation and deleting the file [$File] succeeded"
 		} catch {
-			Write-LogMessage -Message "WARNING: Failed disabling Windows Hibernation and deleting the file [$File]" -Type Warn
+			Write-LogMessage -Message "Disabling Windows Hibernation and deleting the file [$File] failed" -Type Warn
 		}
 	} Else {
 		$script:HibernationEnabled = $false
 		Write-LogMessage -Message "Windows Hibernation is not enabled.  Nothing to do."
 	}
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) completed"
 }
 Function Enable-WindowsHibernation {
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) started"
+	Write-LogMessage -Message "Executing command line: $(Join-Path -Path $env:SystemRoot -ChildPath 'System32\powercfg.exe') -h ON"
 	try {
 		Start-Process -FilePath (Join-Path -Path $env:SystemRoot -ChildPath 'System32\powercfg.exe') -ArgumentList '-h ON' -Wait -ErrorAction Stop -NoNewWindow -Verb RunAs
-		Write-LogMessage -Message "Enabled Windows Hibernation"
+		Write-LogMessage -Message "Enabling Windows Hibernation succeeded"
 	} catch {
-		Write-LogMessage -Message "WARNING: Failed enabling Windows Hibernation" -Type Warn
+		Write-LogMessage -Message "Enabling Windows Hibernation failed" -Type Warn
 	}
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
 Function Compress-NTFSFolder ([string[]]$PathList) {
-	Write-LogMessage -Message "Start Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) started"
 	If ([string]::IsNullOrEmpty($PathList)) {
 		$PathList = @()
 		$PathList += Join-Path -Path $env:SystemRoot -ChildPath 'Inf'
@@ -626,12 +631,13 @@ Function Compress-NTFSFolder ([string[]]$PathList) {
 	ForEach ($Path in $PathList) {
 		If (Test-Path -Path $Path -PathType Container) {
 			Write-LogMessage -Message "Enabling NTFS compression for directory [$Path]"
+			Write-LogMessage -Message "Executing command line: $(Join-Path -Path $env:SystemRoot -ChildPath 'System32\compact.exe') /c /q /i /s:`"$Path`""
 			Start-Process -FilePath (Join-Path -Path $env:SystemRoot -ChildPath 'System32\compact.exe') -ArgumentList '/c', '/q', '/i', "/s:`"$Path`"" -Wait -WindowStyle Hidden -PassThru -ErrorAction SilentlyContinue -Verb RunAs
 		}
 	}
 	#ENHANCEMENT: Compress $env:SystemDrive\<files> which do not have hidden or system attributes
 	#ENHANCEMENT: Compress $env:SystemDrive\<folders> excluding the defaults of "Hyper-V", PerfLogs, "Program Files", "Program Files (x86)", "Users", "Windows", "InetPub"
-	Write-LogMessage -Message "End Function: $(Get-CurrentFunctionName)"
+	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
 Function Get-FreeMB {
 	Return [int](((Get-WmiObject -Namespace 'root\CIMv2' -Class Win32_LogicalDisk -Filter "DeviceID='$env:SystemDrive'" -Property FreeSpace).FreeSpace) / 1024 / 1024)
@@ -652,7 +658,6 @@ Function Test-ShouldContinue {
 
 
 #region ############# Initialize ########################################################## #BOOKMARK: Script Initialize
-$ScriptStartTime = $(Get-Date) #-Description 'The date and time the script completed'
 
 #Detect process elevation / process is running with administrative rights:
 $script:User = [System.Security.Principal.WindowsIdentity]::GetCurrent()
@@ -682,6 +687,7 @@ Start-Script
 #endregion ########## Initialization ###################################################################################
 
 #region ############# Main Script ############################################################### #BOOKMARK: Script Main
+Write-LogMessage -Message "The group (Clean-SystemDiskSpace) started"
 Write-LogMessage -Message "Attempting to get $('{0:n0}' -f $MinimumFreeMB) MB free on the $env:SystemDrive drive"
 $StartFreeMB = Get-FreeMB
 Write-LogMessage -Message "$('{0:n0}' -f $StartFreeMB) MB of free disk space exists before cleanup"
@@ -798,10 +804,12 @@ If (Test-ShouldContinue) { #Purge BranchCache
 If (Test-ShouldContinue) { #Cleanup WinSXS folder... requires reboot to finalize
 	Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
     If ([Environment]::OSVersion.Version -lt (New-Object 'Version' 6,2)) {
-		Write-LogMessage -Message "Cleaning up Windows WinSXS folder using DISM online /Cleanup-Image /SpSuperseded"
+		Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
+		Write-LogMessage -Message 'Executing command line: DISM.exe /online /Cleanup-Image /SpSuperseded'
 		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /SpSuperseded' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
     } Else {
-		Write-LogMessage -Message "Cleaning up Windows WinSXS folder using DISM /online /Cleanup-Image /StartComponentCleanup /ResetBase"
+		Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
+		Write-LogMessage -Message "Executing command line: DISM.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase"
 		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /StartComponentCleanup /ResetBase' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
     }
 }
@@ -810,6 +818,7 @@ If (Test-ShouldContinue) { #Run Disk Cleanup Manager with default safe settings
 }
 If (Test-ShouldContinue) { #Purge System Restore Points
 	Write-LogMessage -Message 'Starting System Restore Point Cleanup'
+	Write-LogMessage -Message "Executing command line: $env:SystemRoot\System32\VSSadmin.exe Delete Shadows /For=$env:SystemDrive /Oldest /Quiet"
 	Start-Process -FilePath "$env:SystemRoot\System32\VSSadmin.exe" -ArgumentList 'Delete Shadows', "/For=$env:SystemDrive",'/Oldest /Quiet' -Verb RunAs -Wait -WindowStyle Hidden -ErrorAction SilentlyContinue -PassThru
 }
 #ENHANCEMENT: Mark OneDrive files as cloud-only (on-demand)
@@ -846,6 +855,7 @@ If (Test-ShouldContinue) { #Delete User Profiles over x days inactive
 	If ($DelProfCmd) {
 		$Argument = 'u' #'l'
 		$PrimaryUser = (Get-WmiObject -Namespace 'root\CIMv2\SMS' -Class SMS_SystemConsoleUser).SystemConsoleUser
+		Write-LogMessage -Message "Executing command line: $DelProfCmd /ed:$PrimaryUser /d:$ProfileAgeInDays /$argument"
 		Start-Process -FilePath "$DelProfCmd" -ArgumentList "/ed:$PrimaryUser /d:$ProfileAgeInDays /$argument" -Wait -Verb RunAs
 	} Else {
 		Write-LogMessage -Message 'DelProf2.exe not found'
@@ -874,5 +884,6 @@ If ((Get-FreeMB) -lt $MinimumFreeMB) {
 	$ReturnCode = 112 #/ 0x00000070 / ERROR_DISK_FULL / There is not enough space on the disk.  This is a ConfigMgr FailRetry error number
 	Write-LogMessage -Message "WARNING: the minimum amount of free disk space of $('{0:n0}' -f $MinimumFreeMB) MB could not be achieved." -Type Warning
 } Else { $ReturnCode = 0 }
+Write-LogMessage -Message 'The group (Clean-SystemDiskSpace) completed'
 Stop-Script -ReturnCode $ReturnCode
 #endregion ########## Finalization #####################################################################################
