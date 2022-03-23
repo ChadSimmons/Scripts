@@ -822,8 +822,8 @@ If (Test-ShouldContinue) { #Purge System Restore Points
 	Start-Process -FilePath "$env:SystemRoot\System32\VSSadmin.exe" -ArgumentList 'Delete Shadows', "/For=$env:SystemDrive",'/Oldest /Quiet' -Verb RunAs -Wait -WindowStyle Hidden -ErrorAction SilentlyContinue -PassThru
 }
 #ENHANCEMENT: Mark OneDrive files as cloud-only (on-demand)
-If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in 1 day
-	Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 1
+If (Test-ShouldContinue) { #Purge ConfigMgr Client SoftwareUpdate Cache items not referenced in 3 day
+	Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 3
 }
 If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in 3 days
 	Remove-CCMCacheContent -Type Package -ReferencedDaysAgo 3
