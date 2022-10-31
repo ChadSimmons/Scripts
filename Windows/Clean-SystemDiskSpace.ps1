@@ -1,3 +1,5 @@
+!!! changes not tested !!!
+
 #requires -Version 2
 #Designed to work with PowerShell 2-5 to support Windows 7 - Windows 10 native PowerShell
 ########################################################################################################################
@@ -47,6 +49,8 @@
 #      from http://powershell.com/cs/blogs/tips/archive/2016/05/31/cleaning-week-deleting-log-file-backups.aspx
 #      and  http://powershell.com/cs/blogs/tips/archive/2016/05/30/cleaning-week-finding-fat-log-file-backups.aspx
 #   #ENHANCEMENT: Log action transactions in CSV
+#	#TODO: Additional files and folders from https://techcommunity.microsoft.com/t5/microsoft-intune/free-up-space-by-deleting-temp-files-via-intune/m-p/3575195/highlight/true#M11283
+#	#TODO: Windows Storage Sense https://support.microsoft.com/en-us/windows/manage-drive-space-with-storage-sense-654f6ada-7bfc-45e5-966b-e24aded96ad5
 #   #See additional TODO tags in the script body
 #   ========== Additional References and Reading ==========
 #   - Microsoft CleanMgr https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cleanmgr
@@ -750,18 +754,75 @@ If (Test-ShouldContinue) { #Cleanup User Temp folders: Deletes anything in the T
 		#Remove-DirectoryContents does not delete folders.  We do NOT want to delete the 'LOW' folder
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 	}
-	#ENHANCEMENT: Delete Outlook Temp Folder Files not modified in the last X days
 }
-If (Test-ShouldContinue) { #Cleanup User Temporary Internet Files
-	# Removes all files and folders in user's Temporary Internet Files older then $DaysToDelete
-	Write-LogMessage -Message 'Cleanup User Temporary Internet Files'
-	$UserTempInternetFilesPaths = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Windows\Temporary Internet Files\*" -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) })
-	ForEach ($Path in $UserTempInternetFilesPaths) {
+If (Test-ShouldContinue) { #Cleanup User previous Microsoft Teams files
+	# Removes all files and folders in user's AppData Local Microsoft Teams's previous folder
+	Write-LogMessage -Message 'Cleanup User Microsoft Teams previous folder'
+	$UserTeamsPreviousPaths = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Teams\previous\*" -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) })
+	ForEach ($Path in $UserTeamsPreviousPaths) {
 		Write-LogMessage -Message "Running function Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $($Path.FullName)"
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 	}
 }
-#ENHANCEMENT: Purge internet cache/temp files from Microsoft Edge Chromium, Google Chrome, Mozilla Firefox, Brave, Opera, etc.
+If (Test-ShouldContinue) { #Cleanup User Temp folders: Deletes anything in the Temp folder with creation date over x days ago.
+	$UserTempPaths = Get-ChildItem $env:SystemDrive\users\*\AppData\Local\Temp -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+	ForEach ($Path in $UserTempPaths) {
+		#Remove-DirectoryContents does not delete folders.  We do NOT want to delete the 'LOW' folder
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
+	}
+}
+#ENHANCEMENT: Delete Outlook Temp Folder Files not modified in the last X days
+#ENHANCEMENT: Purge Offline Files
+If (Test-ShouldContinue) { #Cleanup User Firefox profile Temp folders
+	$UserFirefoxPaths = Get-ChildItem $env:SystemDrive\users\*\AppData\Local\Mozilla\Firefox\Profiles\* -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+	ForEach ($Path in $UserFirefoxPaths) {
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache2"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\thumbnails"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cookies.sqlite"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\webappsstore.sqlite"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\chromeappsstore.sqlite"
+	}
+}
+If (Test-ShouldContinue) { #Cleanup User Google Chrome default profile Temp folders
+	$UserChromePaths = Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Google\Chrome\User Data\Default\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+		ForEach ($Path in $UserChromePaths) {
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache2"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Cookies"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Media Cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Cookies-Journal"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Service Worker\CacheStorage"
+	}
+}
+If (Test-ShouldContinue) { #Cleanup User Internet Explorer Temp folders
+	$UserInternetExplorerPaths = Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Windows\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+	ForEach ($Path in $UserInternetExplorerPaths) {
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Temporary Internet Files"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\inetcache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\webcache"
+	}
+}
+If (Test-ShouldContinue) { #Cleanup User Microsoft Edge Temp folders
+	$UserEdgePaths = Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Edge\User Data\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+	ForEach ($Path in $UserEdgePaths) {
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Code Cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Service Worker\CacheStorage"
+	}
+}
+#ENHANCEMENT: Purge internet cache/temp files from Microsoft Edge legacy, Brave, Opera, etc.
+#ENHANCEMENT: Purge Windows Error Reporting... Remove-Item -Path "C:\Users\$($_.Name)\AppData\Local\Microsoft\Windows\WER\*" -Recurse -Force -EA SilentlyContinue -Verbose
+#ENHANCEMENT: Remove-item C:\Users\$($_.Name)\appdata\Local\Microsoft\Windows\Explorer\*.db -Force -EA SilentlyContinue -Verbose
+If (Test-ShouldContinue) { #Cleanup User Outlook NST files
+	# Removes all Outlook .nst files in user's AppData Local path
+	Write-LogMessage -Message 'Cleanup User Microsoft Outlook NST files'
+	$UserOutlookNSTFiles = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Outlook\*.nst" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $false })
+	ForEach ($Path in $UserOutlookNSTFiles) {
+		Write-LogMessage -Message "Running function Remove-File -FilePath $($Path.FullName)"
+			Remove-File -FilePath $Path.FullName
+	}
+}
 If (Test-ShouldContinue) { #Purge Content Indexer Cleaner using Disk Cleanup Manager
 	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Content Indexer Cleaner'
 }
@@ -834,6 +895,13 @@ If (Test-ShouldContinue) { #Purge ConfigMgr Client Application Cache items not r
 If (Test-ShouldContinue) { #Purge C:\Drivers folder
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath 'Drivers')
 }
+#ENHANCEMENT: Rebuild Search Indexer https://www.windowscentral.com/best-ways-to-free-hard-drive-space-windows-10/10
+If (Test-ShouldContinue) { #CompactOS
+	#https://www.windowscentral.com/best-ways-to-free-hard-drive-space-windows-10/9
+	#ENHANCEMENT: compact.exe /CompactOS:always
+}
+#ENHANCEMENT: Disable Windows Reserved Storage https://www.windowscentral.com/best-ways-to-free-hard-drive-space-windows-10/12
+# Set-WindowsReservedStorageState -State disabled
 If (Test-ShouldContinue) { #Delete User Profiles over x days inactive
 	<#
 	.SYNOPSIS

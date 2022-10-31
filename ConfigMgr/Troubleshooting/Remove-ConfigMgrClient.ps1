@@ -210,6 +210,7 @@ If ($Force -or $ResetWUPolicy) {
 }
 If ($Force -or $ResetMDM) {
   # Reset MDM Authority
+  #https://docs.microsoft.com/en-us/answers/questions/289284/moving-to-full-intune-devices-still-showing-as-34c.html
   Write-LogMessage -Message 'Remove MDM Authority registry keys'
   Remove-Item -Path 'HKLM:\SOFTWARE\Microsoft\DeviceManageabilityCSP' -Force -Recurse -ErrorAction SilentlyContinue
   $UpdatePolicy = $true
