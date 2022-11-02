@@ -12,13 +12,15 @@ ECHO ===========================================================================
 ECHO .Synopsis
 ECHO    Install all Microsoft Updates (MSU format) in a folder
 ECHO .Description
-ECHO    Install update and process return code from WUSA.exe
+ECHO    Install updates and process return code from WUSA.exe
+ECHo    WARNING: Only the last update's return code is sent to the calling process
 ECHO .Parameter
 ECHO    [/h] [/help]      display this help information
 ECHO .Parameter
 ECHO    [/ByName|/ByDate] install in order of name (ascending) or modified date (ascending)
 ECHO .Notes
 ECHO    === Change Log History ===
+ECHO    2022/11/02 by Chad.Simmons@CatapultSystems.com - fixed typo
 ECHO    2020/08/03 by Chad.Simmons@CatapultSystems.com - updated return code processing
 ECHO    2017/05/15 by Chad.Simmons@CatapultSystems.com - Created
 ECHO ================================================================================
@@ -34,11 +36,11 @@ If "%1"=="-ByName" GOTO:InstallByName
 GOTO:InstallByDate
 :InstallByName
 	::Find all MSU files and install in order of name
-	FOR /f %%a IN ('dir /b /a-d /on *.*') DO CALL:InstallMSU %%a
+	FOR /f %%a IN ('dir /b /a-d /on *.msu') DO CALL:InstallMSU %%a
 GOTO:End
 :InstallByDate
 	::Find all MSU files and install in order of date modified
-	FOR /f %%a IN ('dir /b /a-d /od *.*') DO CALL:InstallMSU %%a
+	FOR /f %%a IN ('dir /b /a-d /od *.msu') DO CALL:InstallMSU %%a
 GOTO:End
 
 :InstallMSU
