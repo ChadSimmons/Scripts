@@ -817,7 +817,7 @@ If (Test-ShouldContinue) { #Cleanup User Microsoft Edge Temp folders
 If (Test-ShouldContinue) { #Cleanup User Outlook NST files
 	# Removes all Outlook .nst files in user's AppData Local path
 	Write-LogMessage -Message 'Cleanup User Microsoft Outlook NST files'
-	$UserOutlookNSTFiles = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Outlook\*.nst" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $false })
+	$UserOutlookNSTFiles = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Outlook\*.nst" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $false)})
 	ForEach ($Path in $UserOutlookNSTFiles) {
 		Write-LogMessage -Message "Running function Remove-File -FilePath $($Path.FullName)"
 			Remove-File -FilePath $Path.FullName
