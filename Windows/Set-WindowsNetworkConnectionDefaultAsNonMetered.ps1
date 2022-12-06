@@ -105,6 +105,41 @@ $regKey.SetAccessControl($regACL)
 $regRule = New-Object System.Security.AccessControl.RegistryAccessRule ('Administrators', 'FullControl', 'ContainerInherit', 'None', 'Allow')
 $regACL.SetAccessRule($regRule)
 $regKey.SetAccessControl($regACL)
-# Change registry key values
+# Change registry key values for profile defaults
 $result = Set-ItemProperty -Force -ErrorAction SilentlyContinue -Name '4G' -Value 1 -Path "registry::HKLM\$HKLMpath"
 $result = Set-ItemProperty -Force -ErrorAction SilentlyContinue -Name '3G' -Value 1 -Path "registry::HKLM\$HKLMpath"
+
+
+#.Synopsis
+#   Set-WindowsNetworkConnectionsAsNonMetered.ps1
+#   Set each existing network connection as non-metered
+#   Verified working on Wi-Fi profiles
+#	Verified NOT working on LAN/Ethernet profiles
+#	Not verified on WWAN/5G/4G/3G profiles
+
+#Change each network connection profile to be non-metered 
+[void][Windows.Networking.Connectivity.NetworkInformation, Windows, ContentType = WindowsRuntime]
+$NetConnectionProfiles = [Windows.Networking.Connectivity.NetworkInformation]::GetConnectionProfiles()
+ForEach ($NetConnectionProfile in $NetConnectionProfiles) {
+	Write-Host "Network profile [$($NetConnectionProfile.ProfileName)] NetworkCostType is $($NetConnectionProfile.GetConnectionCost().NetworkCostType)"
+	If ($NetConnectionProfile.IsWlanConnectionProfile -eq $true) { #sets the wirless profile to be NOT metered
+		netsh wlan set profileparameter name="$($NetConnectionProfile.ProfileName)" cost=Unrestricted #Fixed
+	}
+	If ($NetConnectionProfile.IsWlanConnectionProfile -eq $false -and $NetConnectionProfile.IsWWanConnectionProfile -eq $false) {
+		#TODO: find a command to set an ethernet/LAN profile to metered/non-metered
+	}
+}
+
+<#
+# Test-IsCurrentNetworkConnectionMetered
+# https://stackoverflow.com/questions/57344269/check-if-current-network-connection-is-metered-in-windows-batch-file
+# https://gist.github.com/nijave/d657fb4cdb518286942f6c2dd933b472
+[void][Windows.Networking.Connectivity.NetworkInformation, Windows, ContentType = WindowsRuntime]
+$cost = [Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile().GetConnectionCost()
+$cost.ApproachingDataLimit -or $cost.OverDataLimit -or $cost.Roaming -or $cost.BackgroundDataUsageRestricted -or ($cost.NetworkCostType -ne 'Unrestricted')
+# Test-IsCurrentNetworkConnectionMetered
+# https://devblogs.microsoft.com/scripting/more-messing-around-with-wireless-settings-with-powershell/
+$connectionProfile = [Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile()
+$connectionCost = $connectionProfile.GetConnectionCost()
+$networkCostType = $connectionCost.NetworkCostType
+#>
