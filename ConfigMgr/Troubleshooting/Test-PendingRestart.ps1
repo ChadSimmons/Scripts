@@ -222,6 +222,7 @@ Function Test-PendingRestartEx {
 		} else {
 			$RestartStatus.Online = $false
 		}
+		#TODO: Verify the case of one having a null value which may result in an invalid state
 		$RestartStatus.RestartPending=($RestartStatus.CBServicing -or $RestartStatus.CCMClient -or $RestartStatus.DomainJoin -or $RestartStatus.ComputerRename -or $RestartStatus.FileRename -or $RestartStatus.WindowsUpdate)
 		Write-Host "$($RestartStatus.Computer) is $($RestartStatus.RestartPending)"
 		$ComputerStatus += $RestartStatus
