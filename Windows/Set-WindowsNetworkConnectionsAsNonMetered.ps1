@@ -32,13 +32,13 @@ function Enable-Privilege {
  $definition = @'
  using System;
  using System.Runtime.InteropServices;
-  
+
  public class AdjPriv
  {
   [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
   internal static extern bool AdjustTokenPrivileges(IntPtr htok, bool disall,
    ref TokPriv1Luid newst, int len, IntPtr prev, IntPtr relen);
-  
+
   [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
   internal static extern bool OpenProcessToken(IntPtr h, int acc, ref IntPtr phtok);
   [DllImport("advapi32.dll", SetLastError = true)]
@@ -50,7 +50,7 @@ function Enable-Privilege {
    public long Luid;
    public int Attr;
   }
-  
+
   internal const int SE_PRIVILEGE_ENABLED = 0x00000002;
   internal const int SE_PRIVILEGE_DISABLED = 0x00000000;
   internal const int TOKEN_QUERY = 0x00000008;
@@ -85,7 +85,7 @@ function Enable-Privilege {
 }
 
 # Enable the take ownership functionality
-Enable-Privilege SeTakeOwnershipPrivilege 
+Enable-Privilege SeTakeOwnershipPrivilege
 
 
 # Set the registry key to work with
@@ -106,7 +106,40 @@ $regRule = New-Object System.Security.AccessControl.RegistryAccessRule ('Adminis
 $regACL.SetAccessRule($regRule)
 $regKey.SetAccessControl($regACL)
 # Change registry key values for profile defaults
-$result = Set-ItemProperty -Force -ErrorAction SilentlyContinue -Name '4G' -Value 1 -Path "registry::HKLM\$HKLMpath"
+
+# Set the registry key to work with
+$HKLMpath = 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\DefaultMediaCost'
+If ($((Get-ItemProperty -ErrorAction Stop -Name '4G' -Path "registry::HKLM\$HKLMpath") | Select-Object -ExpandProperty '4G') -eq 1) {
+	Write-Output 'OK' #desired value is existing value
+} Else {
+	try {
+		#Set property value
+		Set-ItemProperty -Force -ErrorAction Stop -Name '4G' -Value 1 -Path "registry::HKLM\$HKLMpath"
+		Set-ItemProperty -Force -ErrorAction Stop -Name '3G' -Value 1 -Path "registry::HKLM\$HKLMpath"
+	} catch {
+		#Take ownership of registry key, set permissions, and retry setting property value
+		$Owner = 'SYSTEM'
+		$regKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($HKLMpath, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::TakeOwnership)
+		$regACL = $regKey.GetAccessControl()
+		$regACL.SetOwner([System.Security.Principal.NTAccount]$Owner)
+		$regKey.SetAccessControl($regACL)
+		# Change Permissions
+		$regKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($HKLMpath, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::ChangePermissions)
+		$regACL = $regKey.GetAccessControl()
+		$regRule = New-Object System.Security.AccessControl.RegistryAccessRule ($Owner, 'FullControl', 'ContainerInherit', 'None', 'Allow')
+		$regACL.SetAccessRule($regRule)
+		$regKey.SetAccessControl($regACL)
+		#Set property value (retry)
+		Set-ItemProperty -Force -ErrorAction Stop -Name '4G' -Value 1 -Path "registry::HKLM\$HKLMpath"
+		Set-ItemProperty -Force -ErrorAction Stop -Name '3G' -Value 1 -Path "registry::HKLM\$HKLMpath"
+		Write-Output "OK" #remediated
+	  }
+}
+
+New-ItemProperty -Force -ErrorAction Stop -Name 'PermissionTest' -Value 'Yes' -Path "registry::HKLM\$HKLMpath" -PropertyType String
+Remove-ItemProperty -Force -ErrorAction Stop -Name 'PermissionTest' -Path "registry::HKLM\$HKLMpath"
+
+$result = try { Set-ItemProperty -Force -ErrorAction Stop -Name '4G' -Value 1 -Path "registry::HKLM\$HKLMpath" } catch {  }
 $result = Set-ItemProperty -Force -ErrorAction SilentlyContinue -Name '3G' -Value 1 -Path "registry::HKLM\$HKLMpath"
 
 
@@ -117,7 +150,7 @@ $result = Set-ItemProperty -Force -ErrorAction SilentlyContinue -Name '3G' -Valu
 #	Verified NOT working on LAN/Ethernet profiles
 #	Not verified on WWAN/5G/4G/3G profiles
 
-#Change each network connection profile to be non-metered 
+#Change each network connection profile to be non-metered
 [void][Windows.Networking.Connectivity.NetworkInformation, Windows, ContentType = WindowsRuntime]
 $NetConnectionProfiles = [Windows.Networking.Connectivity.NetworkInformation]::GetConnectionProfiles()
 ForEach ($NetConnectionProfile in $NetConnectionProfiles) {

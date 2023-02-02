@@ -94,10 +94,10 @@ Start-Script -ScriptFile $(If ($PSise) { $PSise.CurrentFile.FullPath } Else { $M
 
 # Stop Services and wait for exit
 Write-LogMessage -Message 'Stopping ConfigMgr services ccmsetup, ccmexec, smstsmgr, cmrcservice'
-Stop-Service -Name ccmsetup -Force -ErrorAction SilentlyContinue
-Stop-Service -Name CcmExec -Force -ErrorAction SilentlyContinue
-Stop-Service -Name smstsmgr -Force -ErrorAction SilentlyContinue
-Stop-Service -Name CmRcService -Force -ErrorAction SilentlyContinue
+Stop-Service -Force -ErrorAction SilentlyContinue -Name ccmsetup
+Stop-Service -Force -ErrorAction SilentlyContinue -Name CcmExec
+Stop-Service -Force -ErrorAction SilentlyContinue -Name smstsmgr
+Stop-Service -Force -ErrorAction SilentlyContinue -Name CmRcService
 
 # Preserve CMTrace.exe log file viewer
 Write-LogMessage -Message 'Preserving CMTrace.exe log file viewer'
@@ -131,8 +131,12 @@ If (Test-Path $CCMSetupPath) {
   # wait for exit
   try {
     $CCMSetupProcess = Get-Process -Name ccmsetup -ErrorAction Stop
-		  $CCMSetupProcess.WaitForExit()
+		$CCMSetupProcess.WaitForExit()
   } Catch { }
+  Do {
+      Start-Sleep -Seconds 1
+      $Process = (Get-Process -Name ccmsetup -ErrorAction SilentlyContinue)
+  } Until ($null -eq $Process)
 } Else {
   Write-LogMessage -Message 'CCMsetup.exe not found'
 }
@@ -153,25 +157,28 @@ try {
 # Remove ConfigMgr services from registry
 Write-LogMessage -Message 'Remove ConfigMgr services from registry'
 $RegistryPath = 'HKLM:\SYSTEM\CurrentControlSet\Services'
-Remove-Item -Path $RegistryPath\CCMSetup -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path $RegistryPath\CcmExec -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path $RegistryPath\SMSTSMgr -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path $RegistryPath\CmRcService -Force -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path $RegistryPath\CCMSetup
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path $RegistryPath\CcmExec
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path $RegistryPath\SMSTSMgr
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path $RegistryPath\CmRcService
 
 # Remove ConfigMgr Client from registry
 Write-LogMessage -Message 'Remove ConfigMgr Client from registry'
 $RegistryPath = 'HKLM:\SOFTWARE\Microsoft'
-Remove-Item -Path $RegistryPath\SMS -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path $RegistryPath\CCM -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path $RegistryPath\CCMSetup -Force -Recurse -ErrorAction SilentlyContinue
+#TODO: consider 32-bit registry keys HKLM:\SOFTWARE\Wow6432Node\Microsoft\SMS'
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path $RegistryPath\SMS
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path $RegistryPath\CCM
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path $RegistryPath\CCMSetup
 
 # Remove leftover folders and files
 Write-LogMessage -Message 'Remove leftover folders and files'
-Remove-Item -Path "$env:SystemRoot\CCM" -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path "$env:SystemRoot\ccmsetup" -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path "$env:SystemRoot\ccmcache" -Force -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path "$env:SystemRoot\SMSCFG.ini" -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "$env:SystemRoot\SMS*.mif" -Force -ErrorAction SilentlyContinue
+#TODO: Take ownership of folders first - $null = takeown /F "$($Env:WinDir)\CCM" /R /A /D Y 2>&1
+#TODO: preserve ccmsetup.exe in a different location just in case a reinstall is desired
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path "$env:SystemRoot\ccmsetup"
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path "$env:SystemRoot\CCM"
+Remove-Item -Force -Recurse -ErrorAction SilentlyContinue -Path "$env:SystemRoot\ccmcache"
+Remove-Item -Force -ErrorAction SilentlyContinue -Path "$env:SystemRoot\SMSCFG.ini"
+Remove-Item -Force -ErrorAction SilentlyContinue -Path "$env:SystemRoot\SMS*.mif"
 
 # Remove ConfigMgr Start Menu Software Center shortcut and empty folder
 Write-LogMessage -Message 'Remove ConfigMgr Start Menu Software Center shortcut and empty folder'
@@ -196,11 +203,24 @@ Write-LogMessage -Message 'Remove ConfigMgr self-signed certificates'
 Get-ChildItem -Path 'cert:LocalMachine\SMS\*' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path 'HKLM:\SOFTWARE\Microsoft\SystemCertificates\SMS\Certificates\*' -Force -ErrorAction SilentlyContinue
 
+
+#TODO: delete Microsoft Crypto RSA keys
+#$null = takeown /F "C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys" /R /A /D Y 2>&1
+#Remove-Item -Path "C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys" -Force -Recurse -Confirm:$false -Verbose -ErrorAction SilentlyContinue
+
+
+# TODO: Remove ConfigMgr Scheduled Tasks
+# Delete Folder at the Task Scheduler under "Microsoft" delete the "Configuration Manager" folder and any tasks within it
+
+
 If ($Force -or $ResetWMI) {
   # Remove WMI Namespaces
   Write-LogMessage -Message 'Remove WMI Namespaces'
-  Get-WmiObject -Query "SELECT * FROM __Namespace WHERE Name='ccm'" -Namespace root | Remove-WmiObject
+  #TODO: Add support for PowerShell 7 and maintain backwards compatibility for PowerShell 2
   Get-WmiObject -Query "SELECT * FROM __Namespace WHERE Name='sms'" -Namespace root\CIMv2 | Remove-WmiObject
+  Get-WmiObject -Query "SELECT * FROM __Namespace WHERE Name='ccm'" -Namespace root | Remove-WmiObject
+  Get-WmiObject -Query "SELECT * FROM __Namespace WHERE Name='CCMVDI'" -Namespace root\CIMv2 | Remove-WmiObject
+  Get-WmiObject -Query "SELECT * FROM __Namespace WHERE Name='SmsDm'" -Namespace root\CIMv2 | Remove-WmiObject
 }
 If ($Force -or $ResetWUPolicy) {
   # Remove Windows Update Agent policies and rely on GPO or MDM to reapply them
@@ -234,6 +254,18 @@ If ($Force -or $UpdatePolicy) {
   #https://oofhours.com/2019/09/28/forcing-an-mdm-sync-from-a-windows-10-client/
   Get-ScheduledTask | Where-Object { $_.TaskName -eq 'PushLaunch' } | Start-ScheduledTask
 }
+
+
+<#
+CHKDSK /F
+Reboot
+fsutil resource setautoreset true C:\
+
+
+
+netsh winhttp reset proxy
+#>
+
 
 # Get final status to determine success
 $CCMService = Get-Service -Name ccmexec -ErrorAction SilentlyContinue
