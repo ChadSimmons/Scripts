@@ -184,6 +184,7 @@ Remove-Item -Force -ErrorAction SilentlyContinue -Path "$env:SystemRoot\SMS*.mif
 Write-LogMessage -Message 'Remove ConfigMgr Start Menu Software Center shortcut and empty folder'
 $MSCStartMenuPath = Join-Path -Path $([system.environment]::GetFolderPath('CommonPrograms')) -ChildPath 'Microsoft System Center\Configuration Manager'
 If (Test-Path -Path "$MSCStartMenuPath\Software Center.lnk") { Remove-Item -Path "$MSCStartMenuPath\Software Center.lnk" -Force -ErrorAction SilentlyContinue }
+If (Test-Path -Path "$MSCStartMenuPath\Softwarecenter.lnk") { Remove-Item -Path "$MSCStartMenuPath\Softwarecenter.lnk" -Force -ErrorAction SilentlyContinue }
 $Files = @(Get-ChildItem -Path $MSCStartMenuPath -Filter '*.lnk' -File -Recurse -ErrorAction SilentlyContinue)
 If ($Files.count -eq 0) { Remove-Item -Path "$MSCStartMenuPath" -Force -ErrorAction SilentlyContinue }
 
@@ -195,6 +196,7 @@ If ($Files.count -eq 0) { Remove-Item -Path "$MSCStartMenuPath" -Force -ErrorAct
 $MEMStartMenuPath = Join-Path -Path $([system.environment]::GetFolderPath('CommonPrograms')) -ChildPath 'Microsoft Endpoint Manager\Configuration Manager'
 If (Test-Path -Path "$MEMStartMenuPath\Software Center.lnk") { Remove-Item -Path "$MEMStartMenuPath\Software Center.lnk" -Force -ErrorAction SilentlyContinue }
 If (Test-Path -Path "$MEMStartMenuPath\Software Centre.lnk") { Remove-Item -Path "$MEMStartMenuPath\Software Centre.lnk" -Force -ErrorAction SilentlyContinue }
+If (Test-Path -Path "$MEMStartMenuPath\Softwarecenter.lnk") { Remove-Item -Path "$MEMStartMenuPath\Softwarecenter.lnk" -Force -ErrorAction SilentlyContinue }
 $Files = @(Get-ChildItem -Path $MEMStartMenuPath -Filter '*.lnk' -File -Recurse -ErrorAction SilentlyContinue)
 If ($Files.count -eq 0) { Remove-Item -Path "$MEMStartMenuPath" -Force -ErrorAction SilentlyContinue }
 
