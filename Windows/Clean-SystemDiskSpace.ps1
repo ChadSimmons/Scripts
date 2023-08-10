@@ -14,6 +14,12 @@
 #      Free disk space is evaluated before each cleanup task.  The tasks are ordered by priority/safety so less "risky"
 #      cleanup task are run first.
 #      Disable (comment out) tasks that are too risky or do not make sense in your environment.
+#
+#   ===== Detection script for Proactive Remediation, etc. =====
+#   $FreeMB = $([int](((Get-WmiObject -Namespace 'root\CIMv2' -Class Win32_LogicalDisk -Filter "DeviceID='$env:SystemDrive'" -Property FreeSpace).FreeSpace) / 1024 / 1024))
+#   Write-Output $FreeMB
+#   If ($FreeMB -lt 25600) { exit 1 }
+#
 #.PARAMETER MinimumFreeMB
 #   Specifies the amount of free disk space the system drive (C:\) must have before ceasing to cleanup
 #   If not specified, 25 GB / 25600 MB will be used to support Windows 10 upgrades
@@ -47,8 +53,9 @@
 #      from http://powershell.com/cs/blogs/tips/archive/2016/05/31/cleaning-week-deleting-log-file-backups.aspx
 #      and  http://powershell.com/cs/blogs/tips/archive/2016/05/30/cleaning-week-finding-fat-log-file-backups.aspx
 #   #ENHANCEMENT: Log action transactions in CSV
-#	#TODO: Additional files and folders from https://techcommunity.microsoft.com/t5/microsoft-intune/free-up-space-by-deleting-temp-files-via-intune/m-p/3575195/highlight/true#M11283
-#	#TODO: Windows Storage Sense https://support.microsoft.com/en-us/windows/manage-drive-space-with-storage-sense-654f6ada-7bfc-45e5-966b-e24aded96ad5
+#   #TODO: Additional files and folders from https://techcommunity.microsoft.com/t5/microsoft-intune/free-up-space-by-deleting-temp-files-via-intune/m-p/3575195/highlight/true#M11283
+#   #TODO: Windows Storage Sense https://support.microsoft.com/en-us/windows/manage-drive-space-with-storage-sense-654f6ada-7bfc-45e5-966b-e24aded96ad5
+#   #TODO: SSD Trim (defrag optimize) for @MickyT
 #   #See additional TODO tags in the script body
 #   ========== Additional References and Reading ==========
 #   - Microsoft CleanMgr https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cleanmgr
