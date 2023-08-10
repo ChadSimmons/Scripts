@@ -13,7 +13,7 @@
 #   A brief description of the function or script
 #.DESCRIPTION
 #   A detailed description of the function or script
-#	About Comment Based Help https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comment_based_help?view=powershell-5.1
+#	About Comment Based Help https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comment_based_help
 #.PARAMETER <name>
 #   Specifies <xyz>
 #.Parameter LogFile
@@ -44,7 +44,7 @@
 #region ############# Parameters and variable initialization ############################## #BOOKMARK: Script Parameters
 [CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 Param (
-	[Parameter(Mandatory = $false, HelpMessage = '~myDescription')][switch]$MySwitch,
+	[Parameter(Mandatory = $false, HelpMessage = '~myDescription~')][switch]$MySwitch,
 	[Parameter(Mandatory = $false, HelpMessage = 'Full folder directory path and file name for logging')][Alias('Log')][string]$LogFile
 )
 #endregion ########## Parameters and variable initialization ###########################################################
@@ -53,14 +53,17 @@ Param (
 ########################################################################################################################
 ########################################################################################################################
 Function Get-FunctionExample ($Parameter1) {
-	#.Synopsis
-	#   Get...
-	#.Description
-	#   Set...
-	#.Notes
-	#   - YYYY/MM/DD by name@contoso.com - ~updated description~
-	#   - YYYY/MM/DD by name@contoso.com - created
-	#.Example  Get-FunctionExample -Parameter1 'abc'
+	<#
+	.Synopsis
+	   Get...
+	.Description
+	   Set...
+	.Notes
+	   - YYYY/MM/DD by name@contoso.com - ~updated description~
+	   - YYYY/MM/DD by name@contoso.com - created
+	.Example
+	   Get-FunctionExample -Parameter1 'abc'
+	#>
 }
 Function Start-Script ([parameter(Mandatory = $true)][string]$ScriptFile) {
 	#.Synopsis Gather information about the script and write the log header information
@@ -71,14 +74,17 @@ Function Start-Script ([parameter(Mandatory = $true)][string]$ScriptFile) {
 	Write-LogMessage -Message "==================== Starting Script ===================="
 	Write-LogMessage -Message "Script Info...`n   Script file [$script:ScriptFile]`n   Log file [$LogFile]`n   Computer [$env:ComputerName]`n   Start time [$(Get-Date -Format 'F')]" -Console
 }
-Function Write-LogMessageSE {
-	#.Synopsis Write a log entry in CMTrace format with as little code as possible (i.e. Simplified Edition)
+Function Write-LogMessage {
+	#.Synopsis Write a log entry in CMTrace format with almost as little code as possible (i.e. Simplified Edition)
 	param ($Message, [ValidateSet('Error', 'Warn', 'Warning', 'Info', 'Information', '1', '2', '3')]$Type = '1', $LogFile = $script:LogFile, [switch]$Console)
-	If (!(Test-Path 'variable:script:LogFile')) { $script:LogFile = $LogFile }
+	If ([string]::IsNullOrEmpty($LogFile)) { $LogFile = "$env:SystemRoot\Logs\ScriptCMTrace.log" }
+	If (-not(Test-Path 'variable:script:LogFile')) { $script:LogFile = $LogFile }
 	Switch ($Type) { { @('2', 'Warn', 'Warning') -contains $_ } { $Type = 2 }; { @('3', 'Error') -contains $_ } { $Type = 3 }; Default { $Type = 1 } }
-	"<![LOG[$Message]LOG]!><time=`"$(Get-Date -F HH:mm:ss.fff)+000`" date=`"$(Get-Date -F 'MM-dd-yyyy')`" component=`" `" context=`" `" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile -WhatIf:$false
-	If ($Console) { Write-Host "[$(Get-Date -F HH:mm:ss.fff)] $Message" }
-}; Set-Alias -Name 'Write-LogMessage' -Value 'Write-LogMessageSE' -Confirm:$false -Force
+	If ($Console) { Write-Output "$(Get-Date -F 'yyyy/MM/dd HH:mm:ss.fff')`t$(Switch ($Type) { 2 { 'WARNING: '}; 3 { 'ERROR: '}})$Message" }
+	try {
+		Add-Content -Path "filesystem::$LogFile" -Encoding UTF8 -WhatIf:$false -Confirm:$false -Value "<![LOG[$Message]LOG]!><time=`"$(Get-Date -F HH:mm:ss.fff)+000`" date=`"$(Get-Date -F 'MM-dd-yyyy')`" component=`" `" context=`" `" type=`"$Type`" thread=`"$PID`" file=`"`">" -ErrorAction Stop
+	} catch { Write-Warning -Message "Failed writing to log [$LogFile] with message [$Message]" }
+}
 ########################################################################################################################
 ########################################################################################################################
 #endregion ########## Functions ########################################################################################

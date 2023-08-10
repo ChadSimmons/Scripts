@@ -1,11 +1,9 @@
-!!! changes not tested !!!
-
 #requires -Version 2
 #Designed to work with PowerShell 2-5 to support Windows 7 - Windows 10 native PowerShell
 ########################################################################################################################
 #.SYNOPSIS
 #    Clean-SystemDiskSpace.ps1
-#    Remove known temp and unwanted files
+#    Remove known temp and unwanted files based on risk priority until a minimum threshold is met
 #.DESCRIPTION
 #   ===== How to use this script =====
 #   Run this script with administrative rights on Windows 7 SP1 and newer
