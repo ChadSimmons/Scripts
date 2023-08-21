@@ -8,7 +8,7 @@ $SiteServer = 'ConfigMgrPri.contoso.com'
 $ExportPath = "\\$SiteServer\Logs\Collection Info"
 
 
-
+#=======================================================================================================================================
 Function Write-LogMessage {
 	#.Synopsis Write a log entry in CMTrace format with almost as little code as possible (i.e. Simplified Edition)
 	param ($Message, [ValidateSet('Error', 'Warn', 'Warning', 'Info', 'Information', '1', '2', '3')]$Type = '1', $LogFile = $script:LogFile, [switch]$Console)
@@ -41,7 +41,7 @@ Function Export-MCMCollectionMembers ($NameFilter, $ExportFile) {
 	}
 }
 $LogPath = $ExportPath
-$script:Logfile = $(Join-Path -Path $LogPath -ChildPath 'Export-MCM_CollectionInfo.log')
+$script:Logfile = $(Join-Path -Path $LogPath -ChildPath 'Export-MCMCollectionMemberInfo.log')
 $script:dtNow = Get-Date
 $script:DateFormat = 'yyyy/MM/dd HH:mm:ss'
 
@@ -52,7 +52,7 @@ Write-LogMessage -Message "ExportPath is [$ExportPath]"
 Write-LogMessage -Message 'Importing ConfigMgr PowerShell module'
 Import-Module ($Env:SMS_ADMIN_UI_PATH.Substring(0, $Env:SMS_ADMIN_UI_PATH.Length - 5) + '\ConfigurationManager.psd1')
 New-PSDrive -Name $SiteCode -PSProvider cmsite -Root $SiteServer -ErrorAction SilentlyContinue
-
+#=======================================================================================================================================
 
 
 $CollectionName = 'Windows 10 Professional'
