@@ -1,0 +1,27 @@
+*.exe
+~*.*
+*.tmp
+*.lock
+thumbs.db
+winpepge.sys
+UserMan.ini
+LLU_Admin.Local.db
+LLU_Admin.Network.db
+pagefile.sys
+hiberfil.sys
+$ntfs.log
+GDIPFONTCACHEV1.DAT
+"Temporary Internet Files"
+Temp
+MININT
+RECYCLE.BIN
+$RECYCLE.BIN
+RECYCLER
+Windows.old
+Windows\Logs
+Windows\CSC
+Windows\Panther
+Windows\SoftwareDistribution
+_SMSTaskSequence
+"System Volume Information"
+inetpub\logs\*.log

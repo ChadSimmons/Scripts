@@ -1,15 +1,16 @@
-Function Create-RandomFiles{
 #.SYNOPSIS
 #	Generates a number of dumb files for a specific size.
 #.DESCRIPTION
 #	Generates a defined number of files until reaching a maximum size.
 #.PARAMETER TotalSize
-#	Specify the total size you would all the files combined should use on the harddrive.
+#	Specify the total size you would all the files combined should use on the hard drive.
 #	This parameter accepts the following size values (KB,MB,GB,TB).  MB is assumed if no designation is specified.
 #		200KB
 #		5MB
 #		3GB
 #		1TB
+#.PARAMETER SizeRemaining
+#	Specify that the TotalSize is the amount of free disk space to leave after all files are created
 #.PARAMETER NumberOfFiles
 #	Specify a number of files that need to be created. This can be used to generate
 #	a big number of small files in order to simulate User backup specific behavior.
@@ -43,6 +44,7 @@ Function Create-RandomFiles{
 #   ========== Keywords ==========
 #   Keywords: USMT User State Migration random demo sample files
 #   ========== Change Log History ==========
+#   - 2024/01/22 by Chad Simmons - set file Creation Time to Modified Time.  Added SizeRemaining functionality.  Convert from Function to Script
 #   - 2019/06/xx by Chad Simmons - added OldestTime, NewestTime, additional file types
 #   - 2015/12/04 by Chad.Simmons - added Write-Progress, files are created with different sizes, TotalSize defaults to MB, added name prefix, added execution statistics, replaced fsutil.exe with New-Object byte[], added additional filetypes
 #   - 2015/12/04 by Chad.Simmons@CatapultSystems.com - forked from http://powershelldistrict.com/create-files/
@@ -60,9 +62,10 @@ param(
     [Parameter(mandatory=$true)][int32]$NumberOfFiles,
 	[Parameter(mandatory = $true)][ValidateScript( { [IO.Directory]::Exists($_) })][System.IO.DirectoryInfo]$Path,
     [Parameter(mandatory=$true)][string]$TotalSize,
+    [Parameter(mandatory=$false)][switch]$SizeRemaining,
     [Parameter(mandatory=$false)][datetime]$OldestTime = $(Get-Date),
     [Parameter(mandatory=$false)][datetime]$NewestTime = $(Get-Date),
-    [Parameter(mandatory=$false)][validateSet('Multimedia','Image','Office','Junk','Archive','Script','Misc','all','')][String]$FilesType = 'all',
+    [Parameter(mandatory=$false)][ValidateSet('Multimedia','Image','Office','Junk','Archive','Script','Misc','all','')][String]$FilesType = 'all',
     [Parameter(mandatory=$false)][string]$NamePrefix = ''
 )
 
@@ -73,9 +76,14 @@ Begin {
     Write-verbose 'Generating files'
     Write-Verbose -Message "Oldest Timestamp will be $OldestTime"
     Write-Verbose -Message "Newest Timestamp will be $NewestTime"
-    If ($TotalSize -match '^\d+$') { [string]$TotalSize += 'MB' } #if TotalSize isNumeric (did not contain a byte designation, assume MB
+    If ($TotalSize -match '^\d+$') { [string]$TotalSize += 'MB' } #if TotalSize isNumeric (did not contain a byte designation) assume MB
     $Progress.Status="Creating $NumberOfFiles files totalling $TotalSize"
     Write-Progress @Progress
+
+    If ($SizeRemaining) { # instead of creating files of a defined total size, create a total of a calculated size to leave only a defined size of free disk space
+        $FreeSpace = (Get-WmiObject -Namespace 'root\CIMv2' -Class 'Win32_LogicalDisk' -Filter "DeviceID = '$($Path.ToString().Substring(0,2))'" -Property FreeSpace).FreeSpace
+        $TotalSize = $FreeSpace - $TotalSize
+    }
 
     Write-Verbose "Total Size is $TotalSize"
     $FileSize = $TotalSize / $NumberOfFiles
@@ -171,7 +179,7 @@ Begin {
 }
     #----------------Process-----------------------------------------------
 process {
-    $AllCreatedFilles = @()
+    $AllCreatedFilles = @(); $FileNumber = 0
     While ($FileNumber -lt $NumberOfFiles) {
         $FileNumber++
         If ($FileNumber -eq $NumberOfFiles) {
@@ -197,6 +205,7 @@ process {
         try{ #set modified time stamp
             $Timestamp = new-object Datetime (Get-Random -Minimum $OldestTime.ticks -Maximum $NewestTime.ticks)
             (Get-Item -Path $FullPath).LastWriteTime = $Timestamp
+            (Get-Item -Path $FullPath).CreationTime = $Timestamp
         } catch { $_ }
         $Properties = @{'FullPath'=$FullPath;'Size'=$FileSize; 'Timestamp'=$Timestamp}
         $FileCreated = New-Object -TypeName psobject -Property $properties
@@ -210,5 +219,4 @@ end {
     Write-Output $AllCreatedFilles
     Write-Output "`nStart     time: $StartTime"
     Write-Output "Execution time: $(New-TimeSpan -Start $StartTime -end $(Get-Date))" #http://blogs.technet.com/b/heyscriptingguy/archive/2013/03/15/use-powershell-and-conditional-formatting-to-format-time-spans.aspx
-}
 }
