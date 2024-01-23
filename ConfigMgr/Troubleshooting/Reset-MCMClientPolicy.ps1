@@ -1,12 +1,12 @@
 ################################################################################################# #BOOKMARK: Script Help
 #.SYNOPSIS
-#   Reset-MECMClientPolicy.ps1
+#   Reset-MCMClientPolicy.ps1
 #   Purge existing ConfigMgr client policy (hard reset) and force a full (not delta) policy retrieval
 #.PARAMETER ComputerName
 #   Specifies a computer name, comma separated list of computer names, or file with one computer name per line
 #.PARAMETER Action
 #   Purge (default) or FullPolicy
-#   Specifies if the policy should be purged before requesting a full policy retreival instead of a delta policy
+#   Specifies if the policy should be purged before requesting a full policy retrieval instead of a delta policy
 #.PARAMETER GetCred
 #   Switch to prompt for credentials to use with the remote WMI connections
 #.PARAMETER Quiet
@@ -58,29 +58,36 @@ param(
 #region ############# Functions ############################################################ #BOOKMARK: Script Functions
 ########################################################################################################################
 ########################################################################################################################
-Function Start-Script ([parameter(Mandatory=$true)][string]$ScriptFile) {
+Function Start-Script ([parameter(Mandatory = $true)][string]$ScriptFile) {
+	#.Synopsis Gather information about the script and write the log header information
+	$script:ScriptStartTime = Get-Date
 	$script:ScriptFile = $ScriptFile
 	$script:ScriptPath = Split-Path -Path $script:ScriptFile -Parent
 	$script:ScriptFileName = Split-Path -Path $script:ScriptFile -Leaf
-	If ([string]::IsNullOrEmpty($script:LogFile)) { $script:LogFile = Join-Path -Path $script:ScriptPath -ChildPath $([System.IO.Path]::ChangeExtension($script:ScriptFileName, 'log')) }
-	Write-LogMessage -Message "==================== Starting script [$script:ScriptFile] at $((Get-Date).ToString('F')) ===================="
-	Write-LogMessage -Message "Logging to file [$LogFile]" -Console
+	If ([string]::IsNullOrEmpty($script:LogFile)) { $script:LogFile = $(Join-Path -Path $([system.environment]::GetFolderPath('CommonApplicationData')) -ChildPath "Logs\$([System.IO.Path]::ChangeExtension($script:ScriptFileName, 'log'))") }
+	If (-not(Test-Path -Path $(Split-Path -Path $script:LogFile -Parent) -PathType Container -ErrorAction SilentlyContinue)) {
+		New-Item -ItemType Directory -Path $(Split-Path -Path $script:LogFile -Parent) -Force | Out-Null
+	}
+	If ([string]::IsNullOrEmpty($global:TZOffset)) { $global:TZOffset = [System.TimeZoneInfo]::Local.BaseUtcOffset.TotalMinutes }
+	Write-LogMessage -Message '==================== Starting Script ====================' -Console
+	Write-LogMessage -Message "Script Info...`n   Script file [$script:ScriptFile]`n   Log file [$LogFile]`n   Computer [$env:ComputerName]`n   Start time [$(Get-Date -Format 'F')]" -Console
 }
-Function Write-LogMessageSE {
-	#.Synopsis Write a log entry in CMTrace format with as little code as possible (i.e. Simplified Edition)
-	param ($Message, [ValidateSet('Error', 'Warn', 'Warning', 'Info', 'Information', '1', '2', '3')]$Type = '1', $LogFile = $script:LogFile, [switch]$Console)
-	If (!(Test-Path 'variable:script:LogFile')) { $script:LogFile = $LogFile }
+Function Write-LogMessage ($Message, [ValidateSet('Error', 'Warn', 'Warning', 'Info', 'Information', '1', '2', '3')]$Type = '1', $LogFile = $script:LogFile, [switch]$Console) {
+	#.Synopsis Write a log entry in CMTrace format with almost as little code as possible (i.e. Simplified Edition)
 	Switch ($Type) { { @('2', 'Warn', 'Warning') -contains $_ } { $Type = 2 }; { @('3', 'Error') -contains $_ } { $Type = 3 }; Default { $Type = 1 } }
-	"<![LOG[$Message]LOG]!><time=`"$(Get-Date -F HH:mm:ss.fff)+000`" date=`"$(Get-Date -F 'MM-dd-yyyy')`" component=`" `" context=`" `" type=`"$Type`" thread=`"`" file=`"`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile -WhatIf:$false
-	If ($Console) { Write-Host $Message }
-}; Set-Alias -Name 'Write-LogMessage' -Value 'Write-LogMessageSE' -Confirm:$false -Force
+	If ($Console) { Write-Output "$(Get-Date -F 'yyyy-MM-dd HH:mm:ss.fff')$TZOffset`t$(Switch ($Type) { 2 { 'WARNING: '}; 3 { 'ERROR: '}})$Message" }
+	try {
+		Add-Content -Path "filesystem::$LogFile" -Encoding UTF8 -WhatIf:$false -Confirm:$false -Value "<![LOG[$Message]LOG]!><time=`"$(Get-Date -F 'HH:mm:ss.fff')$TZOffset`" date=`"$(Get-Date -F 'MM-dd-yyyy')`" component=`"$ScriptName`" context=`" `" type=`"$Type`" thread=`"$PID`" file=`"`">" -Force -ErrorAction Continue
+	} catch { Write-Warning -Message "Failed writing to log [$LogFile] with message [$Message]" }
+} # Write-LogMessage function v2024.01.22.1810
+
 ########################################################################################################################
 ########################################################################################################################
 #endregion ########## Functions ########################################################################################
 
 
 #region ############# Initialize ########################################################## #BOOKMARK: Script Initialize
-Start-Script -ScriptFile $(If ($PSise) { $PSise.CurrentFile.FullPath } ElseIf (Test-Path -LiteralPath 'variable:HostInvocation') { $HostInvocation.MyCommand.Definition } Else { $MyInvocation.MyCommand.Definition })
+Start-Script -ScriptFile $(If ($PSise) { $PSise.CurrentFile.FullPath } Else { $MyInvocation.MyCommand.Definition })
 #endregion ########## Initialization ###################################################################################
 
 #region ############# Main Script ############################################################### #BOOKMARK: Script Main

@@ -1,0 +1,18 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<policyComments xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://www.microsoft.com/GroupPolicy/CommentDefinitions">
+  <policyNamespaces>
+    <using prefix="ns0" namespace="Microsoft.Policies.WindowsUpdate"></using>
+  </policyNamespaces>
+  <comments>
+    <admTemplate>
+      <comment policyRef="ns0:CorpWuURL" commentText="$(resource.ns0_CorpWuURL)"></comment>
+      <comment policyRef="ns0:DoNotConnectToWindowsUpdateInternetLocations" commentText="$(resource.ns0_DoNotConnectToWindowsUpdateInternetLocations)"></comment>
+    </admTemplate>
+  </comments>
+  <resources minRequiredRevision="1.0">
+    <stringTable>
+      <string id="ns0_CorpWuURL">MUST be Not Configured</string>
+      <string id="ns0_DoNotConnectToWindowsUpdateInternetLocations">(optional) Set to Enabled for ConfigMgr environments.  https://blogs.technet.microsoft.com/windowsserver/2017/01/09/why-wsus-and-sccm-managed-clients-are-reaching-out-to-microsoft-online</string>
+    </stringTable>
+  </resources>
+</policyComments>

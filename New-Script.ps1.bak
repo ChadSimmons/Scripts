@@ -1,20 +1,19 @@
 #requires -Version 3.0
-##requires -RunAsAdministrator
+#requires -RunAsAdministrator
 ################################################################################################# #BOOKMARK: Script Help
-#   Template updated 2024/01/22
+# THIS CODE AND ANY RELATED INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.  We
+# grant You a nonexclusive, royalty-free right to use and modify, but not distribute, the code, provided that You agree:
+# (i) to retain Our name, logo, or trademarks referencing Us as the original provider of the code;
+# (ii) to indemnify, hold harmless, and defend Us and Our suppliers from and against any claims or lawsuits, including
+# attorney fees, that arise or result from the use of the Code.
+#
 #.SYNOPSIS
 #   ScriptFileName.ps1
 #   A brief description of the function or script
 #.DESCRIPTION
 #   A detailed description of the function or script
 #	About Comment Based Help https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comment_based_help
-#
-#   THIS CODE AND ANY RELATED INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED,
-#   INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.  We
-#   grant You a nonexclusive, royalty-free right to use and modify, but not distribute, the code, provided that You agree:
-#   (i) to retain Our name, logo, or trademarks referencing Us as the original provider of the code;
-#   (ii) to indemnify, hold harmless, and defend Us and Our suppliers from and against any claims or lawsuits, including
-#   attorney fees, that arise or result from the use of the Code.
 #.PARAMETER <name>
 #   Specifies <xyz>
 #.Parameter LogFile
@@ -45,15 +44,10 @@
 #region ############# Parameters and variable initialization ############################## #BOOKMARK: Script Parameters
 [CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 Param (
-	[Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, HelpMessage = 'This is the first parameter.')][string[]]$Parameter1,
 	[Parameter(Mandatory = $false, HelpMessage = '~myDescription~')][switch]$MySwitch,
-	[Parameter(Mandatory = $false, HelpMessage = 'Full folder directory path and file name for logging')][Alias('Log')][string]$LogFile # Functions default this to CommonDocuments\Logs\... = $(Join-Path -Path $([System.Environment]::GetFolderPath('Personal')) -ChildPath 'Logs\Scripts.log')
+	[Parameter(Mandatory = $false, HelpMessage = 'Full folder directory path and file name for logging')][Alias('Log')][string]$LogFile
 )
-<#region ############# Debug code ######################
-	$Parameter1="this is a string"
-	If (-not($PSBoundParameters.ContainsKey('Parameter1'))) { [string]$Parameter1 = "ABC"; $PSBoundParameters.Add('Parameter1', $Parameter1) }
-#endregion ########## Debug code #####################>
-#endregion ########## Parameters and variable initialization ##########################################################>
+#endregion ########## Parameters and variable initialization ###########################################################
 
 #region ############# Functions ############################################################ #BOOKMARK: Script Functions
 ########################################################################################################################
@@ -73,29 +67,24 @@ Function Get-FunctionExample ($Parameter1) {
 }
 Function Start-Script ([parameter(Mandatory = $true)][string]$ScriptFile) {
 	#.Synopsis Gather information about the script and write the log header information
-	$script:ScriptStartTime = Get-Date
 	$script:ScriptFile = $ScriptFile
 	$script:ScriptPath = Split-Path -Path $script:ScriptFile -Parent
 	$script:ScriptFileName = Split-Path -Path $script:ScriptFile -Leaf
-	If ([string]::IsNullOrEmpty($script:LogFile)) { $script:LogFile = $(Join-Path -Path $([system.environment]::GetFolderPath('CommonApplicationData')) -ChildPath "Logs\$([System.IO.Path]::ChangeExtension($script:ScriptFileName, 'log'))") }
-	If (-not(Test-Path -Path $(Split-Path -Path $script:LogFile -Parent) -PathType Container -ErrorAction SilentlyContinue)) {
-		New-Item -ItemType Directory -Path $(Split-Path -Path $script:LogFile -Parent) -Force | Out-Null
-	}
-	If ([string]::IsNullOrEmpty($global:TZOffset)) { $global:TZOffset = [System.TimeZoneInfo]::Local.BaseUtcOffset.TotalMinutes }
-	Write-LogMessage -Message "==================== Starting Script ====================" -Console
+	If ([string]::IsNullOrEmpty($script:LogFile)) { $script:LogFile = [System.IO.Path]::ChangeExtension($ScriptFile, 'log') }
+	Write-LogMessage -Message "==================== Starting Script ===================="
 	Write-LogMessage -Message "Script Info...`n   Script file [$script:ScriptFile]`n   Log file [$LogFile]`n   Computer [$env:ComputerName]`n   Start time [$(Get-Date -Format 'F')]" -Console
 }
-Function Write-LogMessage ($Message, [ValidateSet('Error', 'Warn', 'Warning', 'Info', 'Information', '1', '2', '3')]$Type = '1', $LogFile = $script:LogFile, [switch]$Console) {
+Function Write-LogMessage {
 	#.Synopsis Write a log entry in CMTrace format with almost as little code as possible (i.e. Simplified Edition)
-	#If ([string]::IsNullOrEmpty($global:TZOffset)) { $global:TZOffset = [System.TimeZoneInfo]::Local.BaseUtcOffset.TotalMinutes }
-	#If (-not(Test-Path 'variable:script:LogFile')) { $script:LogFile = $LogFile }
+	param ($Message, [ValidateSet('Error', 'Warn', 'Warning', 'Info', 'Information', '1', '2', '3')]$Type = '1', $LogFile = $script:LogFile, [switch]$Console)
+	If ([string]::IsNullOrEmpty($LogFile)) { $LogFile = "$env:SystemRoot\Logs\ScriptCMTrace.log" }
+	If (-not(Test-Path 'variable:script:LogFile')) { $script:LogFile = $LogFile }
 	Switch ($Type) { { @('2', 'Warn', 'Warning') -contains $_ } { $Type = 2 }; { @('3', 'Error') -contains $_ } { $Type = 3 }; Default { $Type = 1 } }
-	If ($Console) { Write-Output "$(Get-Date -F 'yyyy-MM-dd HH:mm:ss.fff')$TZOffset`t$(Switch ($Type) { 2 { 'WARNING: '}; 3 { 'ERROR: '}})$Message" }
+	If ($Console) { Write-Output "$(Get-Date -F 'yyyy/MM/dd HH:mm:ss.fff')`t$(Switch ($Type) { 2 { 'WARNING: '}; 3 { 'ERROR: '}})$Message" }
 	try {
-		Add-Content -Path "filesystem::$LogFile" -Encoding UTF8 -WhatIf:$false -Confirm:$false -Value "<![LOG[$Message]LOG]!><time=`"$(Get-Date -F 'HH:mm:ss.fff')$TZOffset`" date=`"$(Get-Date -F 'MM-dd-yyyy')`" component=`"$ScriptName`" context=`" `" type=`"$Type`" thread=`"$PID`" file=`"`">" -Force -ErrorAction Continue
+		Add-Content -Path "filesystem::$LogFile" -Encoding UTF8 -WhatIf:$false -Confirm:$false -Value "<![LOG[$Message]LOG]!><time=`"$(Get-Date -F HH:mm:ss.fff)+000`" date=`"$(Get-Date -F 'MM-dd-yyyy')`" component=`" `" context=`" `" type=`"$Type`" thread=`"$PID`" file=`"`">" -ErrorAction Stop
 	} catch { Write-Warning -Message "Failed writing to log [$LogFile] with message [$Message]" }
-} # Write-LogMessage function v2024.01.22.1810
-
+}
 ########################################################################################################################
 ########################################################################################################################
 #endregion ########## Functions ########################################################################################
@@ -112,6 +101,5 @@ Write-Debug "`$DebugPreference is [$DebugPreference]" -Debug
 
 #endregion ########## Main Script ######################################################################################
 #region ############# Finalization ########################################################## #BOOKMARK: Script Finalize
-If ($WhatIfPreference) { Write-LogMessage -Message '     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========' -Type Warn }
-Write-LogMessage -Message "==================== Completed script [$script:ScriptFile] in $('{0:g}' -f $(New-TimeSpan -Start $ScriptStartTime -End $(Get-Date))) at $(Get-Date -Format 'F') ====================" -Console
-#endregion ########## Finalization ####################################################################################>
+Write-LogMessage -Message "==================== Completed Script ====================" -Console
+#endregion ########## Finalization #####################################################################################

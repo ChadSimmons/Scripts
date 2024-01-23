@@ -1,0 +1,22 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<policyComments xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://www.microsoft.com/GroupPolicy/CommentDefinitions">
+  <policyNamespaces>
+    <using prefix="ns0" namespace="Microsoft.Policies.DeliveryOptimization"></using>
+  </policyNamespaces>
+  <comments>
+    <admTemplate>
+      <comment policyRef="ns0:DownloadMode" commentText="$(resource.ns0_DownloadMode)"></comment>
+      <comment policyRef="ns0:GroupId" commentText="$(resource.ns0_GroupId)"></comment>
+      <comment policyRef="ns0:MaxCacheAge" commentText="$(resource.ns0_MaxCacheAge)"></comment>
+      <comment policyRef="ns0:MinBackgroundQos" commentText="$(resource.ns0_MinBackgroundQos)"></comment>
+    </admTemplate>
+  </comments>
+  <resources minRequiredRevision="1.0">
+    <stringTable>
+      <string id="ns0_DownloadMode">https://blogs.technet.microsoft.com/mniehaus/2016/08/16/windows-10-delivery-optimization-and-wsus-take-2  and  https://docs.microsoft.com/en-us/windows/deployment/update/waas-optimize-windows-10-updates</string>
+      <string id="ns0_GroupId">(optional) configure per ConfiMgr Boundary Group where a local Distribution Point exists</string>
+      <string id="ns0_MaxCacheAge">Set to 0 to make the cache semi-permanent  https://docs.microsoft.com/en-us/windows/deployment/update/waas-delivery-optimization#set-preferred-cache-devices-for-delivery-optimization</string>
+      <string id="ns0_MinBackgroundQos">Set to &lt;=64 to effectively disable Internet traffic.  https://docs.microsoft.com/en-us/windows/deployment/update/waas-delivery-optimization#set-preferred-cache-devices-for-delivery-optimization</string>
+    </stringTable>
+  </resources>
+</policyComments>

@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Files clsid="{215B2E53-57CE-475c-80FE-9EEC14635851}"><File clsid="{50BE44C8-567A-4ed1-B1D0-9234FE1F38AF}" name="CCMTools" status="CCMTools" image="2" bypassErrors="1" changed="2017-06-05 23:31:26" uid="{36FFB5C3-068E-4300-9171-7998CCC4E557}"><Properties action="U" fromPath="%LogonServer%\NetLogon\CCMTools\*.*" targetPath="%WinDir%\CCMTools" readOnly="0" archive="0" hidden="0" suppress="1"/></File>
+</Files>

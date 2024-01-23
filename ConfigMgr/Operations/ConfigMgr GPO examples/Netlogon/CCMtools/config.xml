@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+	<Client Name="Version">5.00.8498.1007</Client>
+	<Client Name="SiteCode">CEN</Client>
+	<Client Name="Domain">lab.net</Client>
+	<Client Name="AutoUpgrade">True</Client>
+	<Client Name="CacheSize">8192</Client>
+	<Client Name="Share">\\SCCM.lab.net\Clienthealth$\Client</Client>
+	<Client Name="Log" MaxLogSize="4096" MaxLogHistory="2" Enable="True" />
+	<ClientInstallProperty>SMSSITECODE=CEN</ClientInstallProperty>
+	<ClientInstallProperty>MP=SCCM.LAB.NET</ClientInstallProperty>
+	<ClientInstallProperty>FSP=SCCM.LAB.NET</ClientInstallProperty>
+	<ClientInstallProperty>DNSSUFFIX=LAB.NET</ClientInstallProperty>
+	<ClientInstallProperty>/Source:\\SCCM.lab.net\Clienthealth$\client</ClientInstallProperty>
+	<ClientInstallProperty>/MP:SCCM.LAB.NET</ClientInstallProperty>
+	<Log Name="File" Share="\\SCCM.lab.net\ClientHealthLogs$" Level="Full" MaxLogHistory="8"  Enable="True" />
+	<Log Name="SQL" Server="SCCM.lab.net" Enable="True" />
+	<Option Name="DNSCheck" Enable="True" />
+	<Option Name="Drivers" Enable="True" />
+	<Option Name="Updates" Share="\\SCCM\ClientHealth$\Updates" Enable="False" />
+	<Option Name="PendingReboot" StartRebootApplication="True"  Enable="True" />
+	<Option Name="RebootApplication" Application="\\SCCM.lab.net\ClientHealth$\RebootApp\shutdowntool.exe /t:7200 /m:1440" Enable="True" />
+	<Option Name="MaxRebootDays" Days="7" Enable="True" />
+	<Option Name="OSDiskFreeSpace">10</Option>
+	<Option Name="HardwareInventory" Days="10" Enable="True" />
+	<Service Name="BITS" StartupType="Automatic" State="Running" />
+	<Service Name="winmgmt" StartupType="Automatic" State="Running" />
+	<Service Name="wuauserv" StartupType="Automatic" State="Running" />
+	<Service Name="lanmanserver" StartupType="Automatic" State="Running" />
+	<Service Name="RpcSs" StartupType="Automatic" State="Running" />
+	<Remediation Name="AdminShare" Fix="True" />
+	<Remediation Name="ClientProvisioningMode" Fix="True" />
+	<Remediation Name="ClientStateMessages" Fix="True" />
+	<Remediation Name="ClientWUAHandler" Fix="True" />
+	<Remediation Name="ClientCertificate" Fix="True" />
+	<Remediation Name="WMI" Fix="True" />
+</Configuration>

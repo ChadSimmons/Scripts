@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<Startup>
+	<Option Name="LocalAdmin">lab1/dadmin</Option>
+	<Option Name="SiteCode">PRI</Option>
+	<Option Name="CacheSize">5120</Option>
+	<Option Name="AgentVersion">5.00.7958.1000</Option>
+	<Option Name="MinimumInterval">12</Option>
+	<Option Name="MaxLogFile">2048</Option>
+	<Option Name="Delay">120</Option>
+	<Option Name="ErrorLocation">\\cm1\ConfigMgr\Client\Error Logs</Option>
+	<Option Name="ClientLocation">\\cm1\ConfigMgr\Client\Install It</Option>
+	<Option Name="AutoHotfix">\\cm1\ConfigMgr\Client\Hotfixes</Option>
+	<CCMSetupParameter Name="source">\cm1\ConfigMgr\Client\Install It</CCMSetupParameter>
+	<CCMSetupParameter Name="BITSPriority">HIGH</CCMSetupParameter>
+	<CCMSetupParameter Name="noservice" />
+	<InstallProperty Name="FSP"></InstallProperty>
+	<InstallProperty Name="SMSMP">cm1.lab.local</InstallProperty>
+	<ServiceCheck Name="BITS" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="winmgmt" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="wuauserv" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="lanmanserver" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="RpcSs" State="Running" StartMode="Auto" Enforce="True" />
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="EnableDCOM" Expected="Y" Enforce="True" Type="REG_SZ"/>
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="EnableRemoteConnect" Expected="Y" Enforce="False" Type="REG_SZ"/>
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="LegacyAuthenticationLevel" Expected="2" Enforce="False" Type="REG_DWORD"/>
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="LegacyImpersonationLevel" Expected="2" Enforce="False" Type="REG_DWORD"/>
+</Startup>

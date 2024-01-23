@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Startup>
+	<Option Name="LocalAdmin" >theshire/frodo</Option>
+	<Option Name="SiteCode" >Auto</Option>
+	<Option Name="CacheSize">8120</Option>
+	<Option Name="AgentVersion">4.00.6487.2000</Option>
+	<Option Name="MinimumInterval">0</Option>
+	<Option Name="ClientLocation">\\cm1\Client</Option>
+	<Option Name="MaxLogFile">2048</Option>
+	<Option Name="ErrorLocation">\\cm1\ConfigMgr\Client\ErrorLogs</Option>
+	<Option Name="AutoHotfix">\\cm1\ConfigMgr\Client\Hotfixes</Option>
+	<Option Name="Delay" >5</Option>
+	<Option Name="WMIScript" >WMIDiag.vbs</Option>
+	<Option Name="WMIScriptAsynch" >1</Option>
+	<Option Name="WMIScriptOptions" >sms OldestLogHistory=14 LogWMIState BaseNamespace=root\ccm LogFilePath=%logpath%</Option>
+	<InstallProperty Name="FSP"></InstallProperty>
+	<InstallProperty Name="SMSMP"></InstallProperty>
+	<InstallProperty Name="PATCH1">\\cm1\client\i386\hotfix\05-KB2276865\sccm2007ac-sp2-kb2276865-x86.msp</InstallProperty>
+	<InstallProperty Name="PATCH2">\\cm1\client\i386\hotfix\09-KB2509007\sccm2007ac-sp2-kb2509007-x86-enu.msp</InstallProperty>	<ServiceCheck Name="BITS" State="Running" StartMode="Auto" Enforce="True" />
+	<CCMSetupParameter Name="BITSPriority">HIGH</CCMSetupParameter>
+	<CCMSetupParameter Name="source">\\cm1\Client</CCMSetupParameter>
+	<ServiceCheck Name="BITS" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="winmgmt" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="wuauserv" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="lanmanserver" State="Running" StartMode="Auto" Enforce="True" />
+	<ServiceCheck Name="RpcSs" State="Running" StartMode="Auto" Enforce="True" />
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="EnableDCOM" Expected="Y" Enforce="True" Type="REG_SZ"/>
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="EnableRemoteConnect" Expected="Y" Enforce="False" Type="REG_SZ"/>
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="LegacyAuthenticationLevel" Expected="2" Enforce="False" Type="REG_DWORD"/>
+	<RegistryValueCheck Key="HKLM\SOFTWARE\Microsoft\Ole" Value="LegacyImpersonationLevel" Expected="2" Enforce="False" Type="REG_DWORD"/>
+</Startup>
+                         

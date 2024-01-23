@@ -1,0 +1,22 @@
+'*  COPYRIGHT NOTICE:  This script is Copyrighted by Synaptic Fireworks, LLC
+'*
+'*    This copyright notice and all comments in the script must remain intact.
+'* 
+'*    For publicly available scripts:
+'*    If you downloaded this script from CSI-Windows.com or DesktopEngineer.com
+'*    then you may use it in your organization.
+'* 
+'*    For privately scripts (including enhanced versions of public scripts):
+'*    If this script is not available publicly and you received it directly 
+'*    from CSI-Windows.com as a result of training, a conference or personal 
+'*    contact with staff, then you are allowed to use the script in your
+'*    organization.
+'*
+'*    Regardless of this script's public/private availability, 
+'*    no public or private redistribution of this code is allowed - this 
+'*    includes the entire script or parts of the script code.  This     
+'*    includes, but is not limited to email, posting to websites, blogs 
+'*    or forums, CDs, flashdrives or any other means.
+'*    
+'*    Posting links to the script's homepage on CSI-Windows.com is allowed.
+'*
