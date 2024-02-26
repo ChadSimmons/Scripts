@@ -41,8 +41,8 @@
 #region    ######################### Parameters and variable initialization ####
 [CmdletBinding()]
 Param (
-	[Parameter(HelpMessage = 'ConfigMgr 3 character Site Code')][ValidateLength(3, 3)][Alias('Site')][string]$SiteCode = 'CM1',
-	[Parameter(HelpMessage = 'ConfigMgr Primary Site Server Fully Qualified Domain Name')][ValidateScript( { Resolve-DnsName -Name $_ })][Alias('Server', 'SCCMServer')][string]$SiteServer = 'SCCm12.ati.corp.com',
+	[Parameter(HelpMessage = 'ConfigMgr 3 character Site Code')][ValidateLength(3, 3)][Alias('Site')][string]$SiteCode = 'LAB',
+	[Parameter(HelpMessage = 'ConfigMgr Primary Site Server Fully Qualified Domain Name')][ValidateScript( { Resolve-DnsName -Name $_ })][Alias('Server', 'SCCMServer')][string]$SiteServer = 'ConfigMgrPri.contoso.com',
 	[Parameter(HelpMessage = 'ConfigMgr Device Collection Name')][string]$CollectionName,
 	[Parameter(HelpMessage = 'ConfigMgr Device Collection ID')][string]$CollectionID,
 	[Parameter(HelpMessage = 'Full Path and File Name to output results in CSV format')][string]$OutputFile = $(Join-Path -Path ([System.Environment]::GetFolderPath("Personal")) -ChildPath 'CollectionUserDetails.csv')

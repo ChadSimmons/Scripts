@@ -1,7 +1,7 @@
 #requires -Version 3.0
 ################################################################################
 #.SYNOPSIS
-#   Export-MECMObjects.ps1
+#   Export-MCMObjects.ps1
 #   Export ConfigMgr Console objects to native files formats
 #.PARAMETER ExportPathRoot
 #   Specifies the root path to export files to, for example \\Sever\Share\Folder\SCCMObjects
@@ -17,9 +17,9 @@
 #.PARAMETER WithContent
 #   Specifies that object types which have content should export the content.  Be careful with this especially with Task Sequences
 #.EXAMPLE
-#   Export-CMCMQueries.ps1 -SiteCode ABC -SiteServer
+#   Export-MCMObjects.ps1 -SiteCode ABC -SiteServer
 #.EXAMPLE
-#   Export-MECMQueries.ps1 -SiteCode ABC -ExportPathRoot "\\Sever\Share\Folder Name\CMObjects"
+#   Export-MCMObjects.ps1 -SiteCode ABC -ExportPathRoot "\\Sever\Share\Folder Name\CMObjects"
 #.NOTES
 #   This script is maintained at https://github.com/ChadSimmons/Scripts
 #   Additional information about the function or script.
@@ -31,7 +31,7 @@
 #   - 2018/12/21 by Chad.Simmons@CatapultSystems.com - Created
 #   - 2018/12/21 by Chad@ChadsTech.net - Created
 #   === To Do / Proposed Changes ===
-#   #TODO: Use CustomScrptFunctions.ps1 instead of embedding common functions
+#   #TODO: Use CustomScriptFunctions.ps1 instead of embedding common functions
 #   #TODO: Convert to a Module and support exporting of individual objects by ID or Name
 #   #TODO: Support WhatIf
 #   #TODO: Support Overwrite or Not
@@ -43,7 +43,7 @@
 [CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 Param (
 	[Parameter()][string]$ExportPathRoot = $(Join-Path -Path $env:UserProfile -ChildPath 'Downloads\CMObjects'),
-	[Parameter(Mandatory = $true, HelpMessage = 'Computer Fully Qualified Domain Name')][ValidateScript( { Resolve-DnsName -Name $_ })][string]$SiteServer = 'ConfigMgr.contoso.com',
+	[Parameter(Mandatory = $true, HelpMessage = 'Computer Fully Qualified Domain Name')][ValidateScript( { Resolve-DnsName -Name $_ })][string]$SiteServer = 'ConfigMgrPri.contoso.com',
 	[Parameter(Mandatory = $true, HelpMessage = 'ConfigMgr Site Code')][ValidateLength(3, 3)][string]$SiteCode = 'LAB',
 	[Parameter(HelpMessage = 'type of objects to export')][string[]]$ObjectTypes,
 	[Parameter(HelpMessage = 'Export Dependency objects')][bool]$WithDependencies = $true,
@@ -52,8 +52,8 @@ Param (
 #region    ######################### Debug code
 
 $ExportPathRoot = 'C:\DataLocal\ExportCMObjects'
-$SiteCode = 'CM1'
-$SiteServer = 'SCCM12.ati.corp.com'
+$SiteCode = 'LAB'
+$SiteServer = 'ConfigMgrPri.contoso.com'
 $ObjectTypes = 'Collections'
 
 #endregion ######################### Debug code
@@ -210,9 +210,9 @@ Function Connect-ConfigMgr {
 		[Parameter(Mandatory = $false)][ValidateLength(3, 3)][string]$SiteCode,
 		[Parameter(Mandatory = $false)][ValidateLength(1, 255)][string]$SiteServer
 	)
-	If ($Env:SMS_ADMIN_UI_PATH -ne $null) {
+	If ($null -ne $Env:SMS_ADMIN_UI_PATH) {
 		#import the module if it exists
-		If ((Get-Module ConfigurationManager) -eq $null) {
+		If ($null -eq (Get-Module ConfigurationManager)) {
 			Write-Verbose 'Importing ConfigMgr PowerShell Module...'
 			$TempVerbosePreference = $VerbosePreference
 			$VerbosePreference = 'SilentlyContinue'
@@ -239,7 +239,7 @@ Function Connect-ConfigMgr {
 			}
 		}
 		# Connect to the site's drive if it is not already present
-		if ((Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue) -eq $null) {
+		if ($null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
 			Write-Verbose -Message "Creating ConfigMgr Site Drive $($SiteCode):\ on server $SiteServer"
 			# If SiteCode was not specified use the current computer
 			If ([string]::IsNullOrEmpty($SiteServer)) {
@@ -263,7 +263,7 @@ Function Connect-ConfigMgr {
 		Throw 'The ConfigMgr PowerShell Module does not exist!  Install the ConfigMgr Admin Console first.'
 	}
 }; Set-Alias -Name 'Connect-CMSite' -Value 'Connect-ConfigMgr' -Description 'Load the ConfigMgr PowerShell Module and connect to a ConfigMgr site'
-Function Export-MECMQueries {
+Function Export-MCMQueries {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -276,7 +276,7 @@ Function Export-MECMQueries {
 		If ($QueryID) { $CMObjects = @(Get-CMQuery -QueryID $QueryID) }
 		Else { $CMObjects = @(Get-CMQuery | Where-Object { $_.CMQuery -notlike 'SMS*' }) }
 
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Query objects to export" -Type Info -Component 'Export-MECMQueries'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Query objects to export" -Type Info -Component 'Export-MCMQueries'
 		$i = 0
 		ForEach ($CMObject in $CMObjects) {
 			$i++; Write-Output "Exporting $i of $($CMObjects.count) - $($CMObject.Name)"
@@ -293,7 +293,7 @@ Function Export-MECMQueries {
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMAntimalwarePolicies {
+Function Export-MCMAntimalwarePolicies {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -303,7 +303,7 @@ Function Export-MECMAntimalwarePolicies {
 	Try {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMAntimalwarePolicy #{ $_.Name -ne 'Default Client Antimalware Policy' }
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Antimalware Policy objects to export" -Type Info -Component 'Export-MECMAntimalwarePolicies'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Antimalware Policy objects to export" -Type Info -Component 'Export-MCMAntimalwarePolicies'
 		ForEach ($CMObject in $CMObjects) {
 			$ExportFile = "$Path\$(Remove-InvalidFileNameChars -Name $($CMObject.Name)).xml"
 			If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
@@ -318,7 +318,7 @@ Function Export-MECMAntimalwarePolicies {
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMSoftwareMeteringRules {
+Function Export-MCMSoftwareMeteringRules {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -329,12 +329,12 @@ Function Export-MECMSoftwareMeteringRules {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMSoftwareMeteringRule | Select-Object ProductName, OriginalFileName, FileName, FileVersion, LanguageID, Comment, Enabled
 		$CMObjects | Export-Csv -Path "$Path\Software Metering Rules List.csv" -NoTypeInformation -Force
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Software Metering Rules objects to export" -Type Info -Component 'Export-MECMSoftwareMeteringRules'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Software Metering Rules objects to export" -Type Info -Component 'Export-MCMSoftwareMeteringRules'
 		Remove-Variable -Name CMObjects, CMObject, ExportFile -ErrorAction SilentlyContinue | Out-Null
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMConfigurationItems {
+Function Export-MCMConfigurationItems {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -344,7 +344,7 @@ Function Export-MECMConfigurationItems {
 	Try {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMConfigurationItem
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Configuration Items objects to export" -Type Info -Component 'Export-MECMConfigurationItem'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Configuration Items objects to export" -Type Info -Component 'Export-MCMConfigurationItem'
 		ForEach ($CMObject in $CMObjects) {
 			$ExportFile = Join-Path -Path $Path -ChildPath "$(Remove-InvalidFileNameChars -Name $($CMObject.LocalizedDisplayName)).cab"
 			If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
@@ -360,7 +360,7 @@ Function Export-MECMConfigurationItems {
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMBaselines {
+Function Export-MCMBaselines {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -370,7 +370,7 @@ Function Export-MECMBaselines {
 	Try {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMBaseline
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Baseline objects to export" -Type Info -Component 'Export-MECMBaseline'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Baseline objects to export" -Type Info -Component 'Export-MCMBaseline'
 		ForEach ($CMObject in $CMObjects) {
 			$ExportFile = Join-Path -Path $Path -ChildPath "$(Remove-InvalidFileNameChars -Name $($CMObject.LocalizedDisplayName)).cab"
 			If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
@@ -412,7 +412,7 @@ Function Get-MEMCMUserCollectionMembers ($CollectionName, $CollectionID, $SiteCo
 	Write-Verbose -Message "$($CMUsers) users and groups found in collection ID [$CollectionID] named [$CollectionName]"
 	Return $CMUsers
 }
-Function Export-MECMCollections {
+Function Export-MCMCollections {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -425,7 +425,7 @@ Function Export-MECMCollections {
 		If ($CollectionID) { $CMObjects = @(Get-CMCollection -CollectionID $CollectionID) }
 		Else { $CMObjects = @(Get-CMCollection | Where-Object { $_.CollectionID -notlike 'SMS*' }) }
 		Pop-Location
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Collection objects to export" -Type Info -Component 'Export-MECMCollections'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Collection objects to export" -Type Info -Component 'Export-MCMCollections'
 		$i = 0
 		ForEach ($CMObject in $CMObjects) {
 			$i++; Write-Output "Exporting $i of $($CMObjects.count) - $($CMObject.Name)"
@@ -434,7 +434,7 @@ Function Export-MECMCollections {
 				[void](New-Item -Path "filesystem::$ExportPath" -ItemType Container)
 
 				Write-Output "Exporting Collection $($CMObject.CollectionID) - $($CMObject.Name)"
-				Write-LogMessage -Message "Exporting ConfigMgr Collection object named [$($CMObject.Name)] to path [$ExportPath]" -Type Info -Component 'Export-MECMCollection'
+				Write-LogMessage -Message "Exporting ConfigMgr Collection object named [$($CMObject.Name)] to path [$ExportPath]" -Type Info -Component 'Export-MCMCollection'
 				$CMObjectExportBasePath = Join-Path -Path $ExportPath -ChildPath $(Remove-InvalidFileNameChars -Name "Collection $($CMObject.CollectionID) - $($CMObject.Name)")
 				$CMObject | Select-Object * | Out-File -FilePath "$CMObjectExportBasePath.Collection.txt"
 
@@ -454,9 +454,9 @@ Function Export-MECMCollections {
 					#ResourceType 4 is User, 3 is Group
 				} ElseIf ($CMObject.CollectionType -eq 2) {
 					#Device Collection
-					Get-CMCollectionMember -CollectionId $CMObject.CollectionID | Select-Object Name, ResourceId, SMSID, SiteCode, ADSiteName, BoundaryGroups, ClientVerion, CNAccessMP, CNIsOnInternet, CNLastOnlineTime, CNLastOfflineTime, DeviceOS, DeviceOSBuild, Domain, IsClient, IsActive, LastMPServerName, MACAddress, LastActiveTime, LastLogonUser, CurrentLogonUser, PrimaryUser, UserName | Export-Csv -Path "filesystem::$CMObjectExportBasePath.Members.csv" -NoTypeInformation
-					Get-MEMCMDeviceCollectionMembers -CollectionId $CMObject.CollectionID -Source SYSTEM | Select-Object Name, NetBiosName, ResourceId, SMSUniqueIdentifier, extensionAttribute11, Client, Active, ADSitename, ClientVersion, DistinguishedName, FullDomainName, OperatingSystemNameandVersion, Build, atiLastLoginIP, atiLastLoginUser, atiLastLoginUserTime, atiModel, atiSerial, atiSite | Export-Csv -Path "filesystem::$CMObjectExportBasePath.Members.WMI_System.csv" -NoTypeInformation
-					Get-MEMCMDeviceCollectionMembers -CollectionId $CMObject.CollectionID -Source DEVICE | Select-Object Name, ResourceID, SMSID, AADDeviceID, SiteCode, ADLastLogonTime, ADSitename, BoundaryGroups, ClientActiveStatus, ClientVersion, CNAccessMP, CNIsOnInternet, CNLastOfflineTime, CNLastOnlineTime, CurrentLogonUser, DeviceOs, DeviceOSBuild, Domain, IsClient, IsActive, LastActiveTime, LastHardwareScan, LastLogonUser, LastMPServerName, MACAddress, PrimaryUser | Export-Csv -Path "filesystem::$CMObjectExportBasePath.Members.WMI_Device.csv" -NoTypeInformation
+					Get-CMCollectionMember -CollectionId $CMObject.CollectionID | Select-Object Name, ResourceId, SMSID, SiteCode, ADSiteName, BoundaryGroups, ClientVersion, CNAccessMP, CNIsOnInternet, CNLastOnlineTime, CNLastOfflineTime, DeviceOS, DeviceOSBuild, Domain, IsClient, IsActive, LastMPServerName, MACAddress, LastActiveTime, LastLogonUser, CurrentLogonUser, PrimaryUser, UserName | Export-Csv -Path "filesystem::$CMObjectExportBasePath.Members.csv" -NoTypeInformation
+					Get-MEMCMDeviceCollectionMembers -CollectionId $CMObject.CollectionID -Source SYSTEM | Select-Object Name, NetBiosName, ResourceId, SMSUniqueIdentifier, extensionAttribute11, Client, Active, ADSiteName, ClientVersion, DistinguishedName, FullDomainName, OperatingSystemNameandVersion, Build, atiLastLoginIP, atiLastLoginUser, atiLastLoginUserTime, atiModel, atiSerial, atiSite | Export-Csv -Path "filesystem::$CMObjectExportBasePath.Members.WMI_System.csv" -NoTypeInformation
+					Get-MEMCMDeviceCollectionMembers -CollectionId $CMObject.CollectionID -Source DEVICE | Select-Object Name, ResourceID, SMSID, AADDeviceID, SiteCode, ADLastLogonTime, ADSiteName, BoundaryGroups, ClientActiveStatus, ClientVersion, CNAccessMP, CNIsOnInternet, CNLastOfflineTime, CNLastOnlineTime, CurrentLogonUser, DeviceOs, DeviceOSBuild, Domain, IsClient, IsActive, LastActiveTime, LastHardwareScan, LastLogonUser, LastMPServerName, MACAddress, PrimaryUser | Export-Csv -Path "filesystem::$CMObjectExportBasePath.Members.WMI_Device.csv" -NoTypeInformation
 				}
 				Pop-Location
 				#compress archive
@@ -473,10 +473,10 @@ Function Export-MECMCollections {
 		[void](Remove-Variable -Name CMObjects, CMObject, ExportFile -ErrorAction SilentlyContinue)
 		Pop-Location
 	} Catch {
-		Write-LogMessage -Message "FAILED Exporting ConfigMgr Collections" -Type Error -Component 'Export-MECMCollection' -Console
+		Write-LogMessage -Message "FAILED Exporting ConfigMgr Collections" -Type Error -Component 'Export-MCMCollection' -Console
 	}
 }
-Function Export-MECMSecurityRoles {
+Function Export-MCMSecurityRoles {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -486,7 +486,7 @@ Function Export-MECMSecurityRoles {
 	Try {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMSecurityRole | Where-Object { $_.RoleId -notlike 'SMS*' }
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Security Role objects to export" -Type Info -Component 'Export-MECMSecurityRoles'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Security Role objects to export" -Type Info -Component 'Export-MCMSecurityRoles'
 		ForEach ($CMObject in $CMObjects) {
 			$ExportFile = Join-Path -Path $Path -ChildPath "$(Remove-InvalidFileNameChars -Name $($CMObject.RoleName)).xml"
 			If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
@@ -501,7 +501,7 @@ Function Export-MECMSecurityRoles {
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMWindowsEnrollmentProfiles {
+Function Export-MCMWindowsEnrollmentProfiles {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -511,7 +511,7 @@ Function Export-MECMWindowsEnrollmentProfiles {
 	Try {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMWindowsEnrollmentProfile
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Windows Enrollment Profile objects to export" -Type Info -Component 'Export-MECMWindowsEnrollmentProfiles'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Windows Enrollment Profile objects to export" -Type Info -Component 'Export-MCMWindowsEnrollmentProfiles'
 		ForEach ($CMObject in $CMObjects) {
 			$ExportFile = Join-Path -Path $Path -ChildPath "$(Remove-InvalidFileNameChars -Name $($CMObject.Name)).xml"
 			If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
@@ -527,7 +527,7 @@ Function Export-MECMWindowsEnrollmentProfiles {
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMClientSettings {
+Function Export-MCMClientSettings {
 	#.Synopsis Export ConfigMgr/SCCM object for import into a different ConfigMgr environment
 	#.Notes
 	#   2018/12/21 by Chad.Simmons@CatapultSystems.com - Created
@@ -547,14 +547,14 @@ Function Export-MECMClientSettings {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMClientSetting
 		Pop-Location
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MECMClientSettings'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MCMClientSettings'
 		Push-Location -Path $env:SystemDrive
 		$CMObjects | Export-Csv -Path $ExportFile -NoTypeInformation
 		Pop-Location
 
 		#ClientSettings Policy Deployments
 		$ExportFile = Join-Path -Path $Path -ChildPath 'ClientSettingsPoliciesDeployments.csv'
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MECMClientSettings'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MCMClientSettings'
 		Push-Location -Path $env:SystemDrive
 		$CMObjects = Get-CimInstance -ComputerName $SiteServer -Namespace "root\SMS\Site_$($SiteCode)" -ClassName SMS_ClientSettingsAssignment
 		$CMObjects | Select-Object ClientSettingsID, CollectionID, CollectionName | Export-Csv -Path $ExportFile -NoTypeInformation
@@ -562,7 +562,7 @@ Function Export-MECMClientSettings {
 
 		#ClientSettings Policy List
 		$ExportFile = Join-Path -Path $Path -ChildPath 'ClientSettingsPoliciesList.csv'
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MECMClientSettings'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MCMClientSettings'
 		Push-Location -Path $env:SystemDrive
 		$CMObjects = Get-CimInstance -ComputerName $SiteServer -Namespace "root\SMS\Site_$($SiteCode)" -ClassName SMS_ClientSettings
 		$CMObjects | Select-Object Name, Priority, Description, SettingsID, Type, SecuredScopeNames | Export-Csv -Path $ExportFile -NoTypeInformation
@@ -596,10 +596,10 @@ Function Export-MECMClientSettings {
 		Pop-Location
 		$reportAll | Export-Csv -Path $ExportFile -NoTypeInformation
 	} Catch {}
-	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'Export-MECMClientSettings'
+	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'Export-MCMClientSettings'
 	Write-Progress -Id 2 -Activity "Exporting ConfigMgr $CMObjectType" -Status 'Complete' -Completed
 }
-Function Export-MECMTaskSequences {
+Function Export-MCMTaskSequences {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -618,7 +618,7 @@ Function Export-MECMTaskSequences {
 	$TaskSequenceClass = [wmiclass]"\\$SiteServer\root\sms\site_$($SiteCode):sms_tasksequence"
 	Push-Location -Path "$SiteCode`:"
 	$CMObjects = Get-CMTaskSequence
-	Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Task Sequence objects to export" -Type Info -Component 'Export-MECMTaskSequences'
+	Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Task Sequence objects to export" -Type Info -Component 'Export-MCMTaskSequences'
 	$CMObjects | Select-Object PackageID, Name, ReferencesCount, Type, Description | Export-Csv -Path "$Path\TaskSequence List.csv" -NoTypeInformation -Force
 	ForEach ($CMObject in $CMObjects) {
 		#Save the XML
@@ -629,9 +629,9 @@ Function Export-MECMTaskSequences {
 			#Debug: $TaskSequence | Select PackageID, Name, ReferencesCount, Type, Description | Format-List
 			#call the export XML method from the Task Sequence class and call the save method to write the file
 			([xml]$TaskSequenceClass.ExportXml($TaskSequence.Sequence).returnvalue).Save($ExportFile)
-			Write-LogMessage -Type Info -Message "Exported Task Sequence $($TaskSequence.Name) to file [$ExportFile]" -Component 'Export-MECMTaskSequenceAsXML'
+			Write-LogMessage -Type Info -Message "Exported Task Sequence $($TaskSequence.Name) to file [$ExportFile]" -Component 'Export-MCMTaskSequenceAsXML'
 		} Catch {
-			Write-LogMessage -Type Error -Message "Failed exporting Task Sequence $($TaskSequence.Name) to file [$ExportFile]" -Component 'Export-MECMTaskSequenceAsXML'
+			Write-LogMessage -Type Error -Message "Failed exporting Task Sequence $($TaskSequence.Name) to file [$ExportFile]" -Component 'Export-MCMTaskSequenceAsXML'
 		}
 		Remove-Variable -Name TaskSequence, ExportFile -ErrorAction SilentlyContinue | Out-Null
 
@@ -640,9 +640,9 @@ Function Export-MECMTaskSequences {
 			$ExportFile = Join-Path -Path $Path -ChildPath "$($CMObject.Name).zip"
 			If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
 			Export-CMTaskSequence -PackageID $CMObject.PackageID -ExportFilePath $ExportFile -WithDependence $false -WithContent $false
-			Write-LogMessage -Type Info -Message "Exported Task Sequence [$($CMObject.Name)] without Dependencies to file [$ExportFile]" -Component 'Export-MECMTaskSequence'
+			Write-LogMessage -Type Info -Message "Exported Task Sequence [$($CMObject.Name)] without Dependencies to file [$ExportFile]" -Component 'Export-MCMTaskSequence'
 		} Catch {
-			Write-LogMessage -Type Error -Message "Failed exporting Task Sequence [$($CMObject.Name)] without Dependencies to file [$ExportFile]" -Component 'Export-MECMTaskSequence'
+			Write-LogMessage -Type Error -Message "Failed exporting Task Sequence [$($CMObject.Name)] without Dependencies to file [$ExportFile]" -Component 'Export-MCMTaskSequence'
 		}
 		Remove-Variable -Name ExportFile -ErrorAction SilentlyContinue | Out-Null
 
@@ -651,9 +651,9 @@ Function Export-MECMTaskSequences {
 				$ExportFile = Join-Path -Path $Path -ChildPath "$($CMObject.Name) (with dependencies).zip"
 				If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
 				Export-CMTaskSequence -PackageID $($CMObject.PackageID) -ExportFilePath $ExportFile -WithDependence $true -WithContent $false
-				Write-LogMessage -Type Info -Message "Exported Task Sequence [$($CMObject.Name)] with Dependencies to file [$ExportFile]" -Component 'Export-MECMTaskSequence'
+				Write-LogMessage -Type Info -Message "Exported Task Sequence [$($CMObject.Name)] with Dependencies to file [$ExportFile]" -Component 'Export-MCMTaskSequence'
 			} Catch {
-				Write-LogMessage -Type Error -Message "Failed exporting Task Sequence [$($CMObject.Name)] with Dependencies to file [$ExportFile]" -Component 'Export-MECMTaskSequence'
+				Write-LogMessage -Type Error -Message "Failed exporting Task Sequence [$($CMObject.Name)] with Dependencies to file [$ExportFile]" -Component 'Export-MCMTaskSequence'
 			}
 		}
 		Remove-Variable -Name ExportFile -ErrorAction SilentlyContinue | Out-Null
@@ -663,9 +663,9 @@ Function Export-MECMTaskSequences {
 				$ExportFile = Join-Path -Path $Path -ChildPath "$($CMObject.Name) (with content).zip"
 				If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
 				Export-CMTaskSequence -PackageID $($CMObject.PackageID) -ExportFilePath $ExportFile -WithDependence $true -WithContent $true
-				Write-LogMessage -Type Info -Message "Exported Task Sequence [$($CMObject.Name)] with Dependencies and Content to file [$ExportFile]" -Component 'Export-MECMTaskSequence'
+				Write-LogMessage -Type Info -Message "Exported Task Sequence [$($CMObject.Name)] with Dependencies and Content to file [$ExportFile]" -Component 'Export-MCMTaskSequence'
 			} Catch {
-				Write-LogMessage -Type Error -Message "Failed exporting Task Sequence [$($CMObject.Name)] with Dependencies and Content to file [$ExportFile]" -Component 'Export-MECMTaskSequence'
+				Write-LogMessage -Type Error -Message "Failed exporting Task Sequence [$($CMObject.Name)] with Dependencies and Content to file [$ExportFile]" -Component 'Export-MCMTaskSequence'
 			}
 		}
 		Remove-Variable -Name ExportFile -ErrorAction SilentlyContinue | Out-Null
@@ -673,7 +673,7 @@ Function Export-MECMTaskSequences {
 	Remove-Variable -Name CMObjects, CMObject -ErrorAction SilentlyContinue | Out-Null
 	Pop-Location
 }
-Function Export-MECMPackages {
+Function Export-MCMPackages {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -685,7 +685,7 @@ Function Export-MECMPackages {
 	Try {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMPackage #| Select-Object PackageID, Manufacturer, Name, Version, Description
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Package objects to export" -Type Info -Component 'Export-MECMPackage'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Package objects to export" -Type Info -Component 'Export-MCMPackage'
 		$CMObjects | Select-Object PackageID, Manufacturer, Name, Version, Description | Export-Csv -Path "$Path\Packages List.csv" -NoTypeInformation
 		#TODO: add additional properties such as content source path
 		ForEach ($CMObject in $CMObjects) {
@@ -715,7 +715,7 @@ Function Export-MECMPackages {
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMDriverPackages {
+Function Export-MCMDriverPackages {
 	[CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 	Param (
 		[Parameter(Mandatory = $true)][string]$Path,
@@ -727,7 +727,7 @@ Function Export-MECMDriverPackages {
 	Try {
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMDriverPackage
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Driver Package objects to export" -Type Info -Component 'Export-MECMDriverPackages'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr Driver Package objects to export" -Type Info -Component 'Export-MCMDriverPackages'
 		ForEach ($CMObject in $CMObjects) {
 			Try {
 				$ExportFile = Join-Path -Path $Path -ChildPath "$($CMObject.Name).zip"
@@ -767,7 +767,7 @@ Function Export-MECMDriverPackages {
 		Pop-Location
 	} Catch {}
 }
-Function Export-MECMApplications {
+Function Export-MCMApplications {
 	#.Synopsis Export ConfigMgr/SCCM Application objects for import into a different ConfigMgr environment
 	#.Notes
 	#   2018/12/21 by Chad.Simmons@CatapultSystems.com - Created
@@ -783,7 +783,7 @@ Function Export-MECMApplications {
 		Write-Progress -Id 2 -Activity "Exporting ConfigMgr $CMObjectType" -Status 'Getting objects...'
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CMApplication
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MECMApplications'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MCMApplications'
 		$i = 0
 		ForEach ($CMObject in $CMObjects) {
 			$i++
@@ -829,10 +829,10 @@ Function Export-MECMApplications {
 		Remove-Variable -Name CMObjects, CMObject -ErrorAction SilentlyContinue | Out-Null
 		Pop-Location
 	} Catch {}
-	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'Export-MECMApplications'
+	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'Export-MCMApplications'
 	Write-Progress -Id 2 -Activity "Exporting ConfigMgr $CMObjectType" -Status 'Complete' -Completed
 }
-Function Export-MECMScripts {
+Function Export-MCMScripts {
 	#.Synopsis Export ConfigMgr/SCCM Scripts for import into a different ConfigMgr environment
 	#.Notes
 	#   2020/10/16 by Chad.Simmons@CatapultSystems.com - Created
@@ -847,7 +847,7 @@ Function Export-MECMScripts {
 	Try {
 		Write-Progress -Id 2 -Activity "Exporting ConfigMgr $CMObjectType" -Status 'Getting objects...'
 		$CMObjects = Get-WmiObject -Namespace ROOT\SMS\site_$SiteCode -ComputerName $SiteServer -Class SMS_Scripts
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'MECMScripts'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'MCMScripts'
 		$i = 0
 		ForEach ($CMObject in $CMObjects) {
 			$i++
@@ -861,19 +861,19 @@ Function Export-MECMScripts {
 				If (Test-Path -Path $ExportFile -PathType Leaf) { Remove-Item -Path $ExportFile -Force }
 				try {
 					$ScriptText | Out-File -FilePath $ExportFile
-					Write-LogMessage -Message "Exported ConfigMgr $CMObjectType object named [$CMObjectName] to file [$ExportFile]" -Type Info -Component 'MECMScripts'
+					Write-LogMessage -Message "Exported ConfigMgr $CMObjectType object named [$CMObjectName] to file [$ExportFile]" -Type Info -Component 'MCMScripts'
 				} catch {
-					Write-LogMessage -Message "Failed exporting ConfigMgr $CMObjectType object named [$CMObjectName] to file [$ExportFile]" -Type Error -Component 'MECMScripts'
+					Write-LogMessage -Message "Failed exporting ConfigMgr $CMObjectType object named [$CMObjectName] to file [$ExportFile]" -Type Error -Component 'MCMScripts'
 				}
 			}
 			Remove-Variable -Name CMObjects, CMObject, CMObjectName, ExportFile -ErrorAction SilentlyContinue | Out-Null
 		}
 	} Catch {}
-	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'MECMScripts'
+	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'MCMScripts'
 	Write-Progress -Id 2 -Activity "Exporting ConfigMgr $CMObjectType" -Status 'Complete' -Completed
 }
 
-Function Export-MECMxyz {
+Function Export-MCMxyz {
 	#.Synopsis Export ConfigMgr/SCCM object for import into a different ConfigMgr environment
 	#.Notes
 	#   2018/12/21 by Chad.Simmons@CatapultSystems.com - Created
@@ -889,7 +889,7 @@ Function Export-MECMxyz {
 		Write-Progress -Id 2 -Activity "Exporting ConfigMgr $CMObjectType" -Status 'Getting objects...'
 		Push-Location -Path "$SiteCode`:"
 		$CMObjects = Get-CM___
-		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MECM___'
+		Write-LogMessage -Message "Found $($CMObjects.count) ConfigMgr $CMObjectType objects to export" -Type Info -Component 'Export-MCM___'
 		$i = 0
 		ForEach ($CMObject in $CMObjects) {
 			$i++
@@ -907,7 +907,7 @@ Function Export-MECMxyz {
 		Remove-Variable -Name CMObjects, CMObject, CMObjectName, ExportFile -ErrorAction SilentlyContinue | Out-Null
 		Pop-Location
 	} Catch {}
-	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'Export-MECM___'
+	Write-LogMessage -Message "$CMobjectType object export complete" -Type Info -Component 'Export-MCM___'
 	Write-Progress -Id 2 -Activity "Exporting ConfigMgr $CMObjectType" -Status 'Complete' -Completed
 }
 
@@ -1009,7 +1009,7 @@ Connect-ConfigMgr -SiteCode $SiteCode -SiteServer $SiteServer
 #endregion === #Additional objects to export
 
 If ('StatusMessageQuery' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
-	$ExternalScript = Join-Path -Path $ScriptPath -ChildPath 'Export-MECMStatusMessageQuery.ps1'
+	$ExternalScript = Join-Path -Path $ScriptPath -ChildPath 'Export-MCMStatusMessageQuery.ps1'
 	If (Test-Path -Path $ExternalScript -PathType Leaf) {
 		& $ExternalScript -Force -Recurse -SiteServer $SiteServer -Path $(Join-Path -Path $ExportPathRoot -ChildPath 'SCCMStatusMessageQuery.xml')
 	}
@@ -1022,63 +1022,63 @@ If ('SSRSReports' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -
 	}
 }
 If ('SoftwareMeteringRules' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
-	Export-MECMSoftwareMeteringRules -Path $ExportPathRoot -SiteCode $SiteCode
+	Export-MCMSoftwareMeteringRules -Path $ExportPathRoot -SiteCode $SiteCode
 }
 If ('ClientSettings' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
-	Export-MECMClientSettings -Path $ExportPathRoot -SiteCode $SiteCode
+	Export-MCMClientSettings -Path $ExportPathRoot -SiteCode $SiteCode
 }
 If ('WindowsEnrollmentProfiles' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Windows Enrollment Profiles'
-	Export-MECMWindowsEnrollmentProfiles -Path $ExportPath -SiteCode $SiteCode
+	Export-MCMWindowsEnrollmentProfiles -Path $ExportPath -SiteCode $SiteCode
 }
 If ('SecurityRoles' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'SecurityRoles'
-	Export-MECMSecurityRoles -Path $ExportPath -SiteCode $SiteCode
+	Export-MCMSecurityRoles -Path $ExportPath -SiteCode $SiteCode
 }
 If ('Collections' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Collections'
-	Export-MECMCollections -Path $ExportPath -SiteCode $SiteCode #-CollectionID CM100383
+	Export-MCMCollections -Path $ExportPath -SiteCode $SiteCode #-CollectionID CM100383
 }
 If ('ConfigurationItems' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'ConfigurationItems'
-	Export-MECMConfigurationItems -Path $ExportPath -SiteCode $SiteCode
+	Export-MCMConfigurationItems -Path $ExportPath -SiteCode $SiteCode
 }
 If ('Baselines' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Baselines'
-	Export-MECMBaselines -Path $ExportPath -SiteCode $SiteCode
+	Export-MCMBaselines -Path $ExportPath -SiteCode $SiteCode
 }
 If ('Queries' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Queries'
-	Export-MECMQueries -Path $ExportPath -SiteCode $SiteCode
+	Export-MCMQueries -Path $ExportPath -SiteCode $SiteCode
 }
 If ('AntimalwarePolicies' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'AntimalwarePolicies'
-	Export-MECMAntimalwarePolicies -Path $ExportPath -SiteCode $SiteCode
+	Export-MCMAntimalwarePolicies -Path $ExportPath -SiteCode $SiteCode
 }
 If ('Packages' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Packages'
-	Export-MECMPackages -Path $ExportPath -SiteCode $SiteCode -WithContent $WithContent
+	Export-MCMPackages -Path $ExportPath -SiteCode $SiteCode -WithContent $WithContent
 }
 If ('Applications' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Applications'
-	Export-MECMApplications -Path $ExportPath -SiteCode $SiteCode -WithDependencies $WithDependencies -WithContent $WithContent
+	Export-MCMApplications -Path $ExportPath -SiteCode $SiteCode -WithDependencies $WithDependencies -WithContent $WithContent
 }
 If ('DriverPackages' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Driver Packages'
-	Export-MECMDriverPackages -Path $ExportPath -SiteCode $SiteCode -WithDependencies $WithDependencies -WithContent $WithContent
+	Export-MCMDriverPackages -Path $ExportPath -SiteCode $SiteCode -WithDependencies $WithDependencies -WithContent $WithContent
 }
 If ('TaskSequences' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'Task Sequences'
-	Export-MECMTaskSequences -Path $ExportPath -SiteCode $SiteCode -SiteServer $SiteServer -WithDependencies $WithDependencies -WithContent $WithContent
+	Export-MCMTaskSequences -Path $ExportPath -SiteCode $SiteCode -SiteServer $SiteServer -WithDependencies $WithDependencies -WithContent $WithContent
 }
 If ('CMScripts' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq 'All') {
 	$ExportPath = New-ExportPath -RootPath $ExportPathRoot -Path 'CMScripts'
-	Export-MECMScripts -Path $ExportPath -SiteCode $SiteCode -SiteServer $SiteServer
+	Export-MCMScripts -Path $ExportPath -SiteCode $SiteCode -SiteServer $SiteServer
 }
 
 ##region    ####### ConfigMgr Administrative users #####################################################################>
-#$SiteCode = 'CM1'; $SiteServer = 'SCCM12.ati.corp.com'
-#$ExportFile = 'C:\DataLocal\MEMCMAdminUsers.csv'
+#$SiteCode = 'LAB'; $SiteServer = 'ConfigMgrPri.contoso.com'
+#$ExportFile = 'C:\DataLocal\MCMAdminUsers.csv'
 #Push-Location -Path "$SiteCode`:"
 #$CMAdminUsers = Get-CMAdministrativeUser | Select-Object LogonName, IsGroup
 #Pop-Location
@@ -1094,7 +1094,7 @@ If ('CMScripts' -in $ObjectTypes -or $null -eq $ObjectTypes -or $ObjectTypes -eq
 #		$CMAdminUserList += @(Get-WmiObject -ComputerName $SiteServer -Namespace "root\SMS\site_$($SiteCode)" -Query "Select * from SMS_R_User where UniqueUserName = `"$($CMAdminUserID.replace('\','\\'))`"" | Select-Object @{N = 'Group'; E = { $CMAdminUser.LogonName } }, UniqueUserName, ResourceID, ResourceType, UserName, Name, displayname, WindowsNTDomain, distinguishedName, FullDomainName, FullUserName, UserPrincipalName, mail, mobile, telephoneNumber, UserGroupName)
 #	}
 #}
-#$CMAdminUserList | Select-Object Group, UniqueUserName, ResourceID, ResourceType, UserName, Name, displayname, WindowsNTDomain, distinguishedName, FullDomainName, FullUserName, UserPrincipalName, mail, mobile, telephoneNumber | Export-Csv -Path "filesystem::$($ExportFile)" -NoTypeInformation
+#$CMAdminUserList | Select-Object Group, UniqueUserName, ResourceID, ResourceType, UserName, Name, DisplayName, WindowsNTDomain, distinguishedName, FullDomainName, FullUserName, UserPrincipalName, mail, mobile, telephoneNumber | Export-Csv -Path "filesystem::$($ExportFile)" -NoTypeInformation
 #Write-Output "Exported $($CMAdminUserList.Count) users to $ExportFile"
 ##endregion ####### ConfigMgr Administrative users #####################################################################>
 
