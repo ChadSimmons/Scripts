@@ -25,12 +25,12 @@
 #	based on https://www.checkyourlogs.net/export-icons-from-configmgr-database
 #   Additional information about the function or script.
 #   ========== Keywords =========================
-#   Keywords: SCCM ConfigMgr Icon PNG logos
+#   Keywords: SCCM ConfigMgr Icons PNG logos
 #   ========== Change Log History ===============
-#   - YYYY/MM/DD by name@contoso.com - ~updated description~
-#   - YYYY/MM/DD by name@contoso.com - created
+#   - 2024/07/09 by Chad@ChadsTech.net - Added Package and Task Sequence support.  Refactored code to standard PowerShell template
+#   - 2020/01/14 by @ecabot - Émile Cabot | https://www.checkyourlogs.net/author/ecabot
 #   ========== To Do / Proposed Changes =========
-#   - #TODO: Add additional logging and error handling
+#   - #TODO: Add logging and additional error handling
 ########################################################################################################################
 #region ############# Parameters and variable initialization ############################## #BOOKMARK: Script Parameters
 
@@ -42,9 +42,12 @@ Param (
 	[Parameter(Mandatory = $false, HelpMessage = 'Output path for icon/PNG storage')][Alias('Destination')][string]$Path = 'E:\Data\Icons',
 	[Parameter(Mandatory = $false, HelpMessage = 'Full folder directory path and file name for logging')][Alias('Log')][string]$LogFile # Functions default this to CommonDocuments\Logs\... = $(Join-Path -Path $([System.Environment]::GetFolderPath('Personal')) -ChildPath 'Logs\Scripts.log')
 )
-$bufferSize = 8192
+$BufferSize = 8192
 #endregion ########## Parameters and variable initialization ##########################################################>
 
+If (-not(Test-Path -Path $Path -PathType Container -ErrorAction Stop)) {
+	New-Item -ItemType Directory -Path $Path -Force -ErrorAction Stop
+}
 
 #endregion ########## Initialization ###################################################################################
 #region ############# Main Script ############################################################### #BOOKMARK: Script Main
@@ -52,7 +55,7 @@ $bufferSize = 8192
 # T-SQL query for database embedded icons in Applications, Packages, and Task Sequences
 # $Sql = 'SELECT Distinct([Icon]), [Title] FROM dbo.[CI_LocalizedCIClientProperties] where [Icon] is not null'
 
-$Sql = "SELECT Distinct(Icon), 'App' [Type], Trim(' ' From (Publisher + ' ' + Title + ' ' + Version)) [ObjectFullName], Cast(CI_ID as varchar) [ContentID]
+$sqlCommandText = "SELECT Distinct(Icon), 'App' [Type], Trim(' ' From (Publisher + ' ' + Title + ' ' + Version)) [ObjectFullName], Cast(CI_ID as varchar) [ContentID]
 FROM CI_LocalizedCIClientProperties where Icon is not null
 UNION
 SELECT Distinct(P.Icon), 'Pkg' [Type], Trim(' ' FROM (P.Manufacturer + ' ' + P.Name + ' ' + P.Version)) [ObjectFullName], PkgID [ContentID]
@@ -62,48 +65,54 @@ SELECT Distinct(P.Icon), 'TS' [Type], P.Name [ObjectFullName], PkgID [ContentID]
 FROM SMSPackages_G P inner join v_TaskSequencePackage T on P.PkgId = T.PackageID where P.Icon is not null
 order by ContentID"
 
-$con = New-Object -TypeName System.Data.SqlClient.SqlConnection
-$con.ConnectionString = "Data Source=$Server; Integrated Security=True; Initial Catalog=$Database"
-$con.Open()
+$sqlConnection = New-Object -TypeName System.Data.SqlClient.SqlConnection
+$sqlConnection.ConnectionString = "Data Source=$Server; Integrated Security=True; Initial Catalog=$Database"
+$sqlConnection.Open()
 
-$cmd = New-Object-TypeName System.Data.SqlClient.SqlCommand -ArgumentList  $Sql, $con
-$rd = $cmd.ExecuteReader()
+$sqlCommand = New-Object -TypeName System.Data.SqlClient.SqlCommand -ArgumentList $sqlCommandText, $sqlConnection
+$sqlExecutionReader = $sqlCommand.ExecuteReader()
 
-$out = [array]::CreateInstance('Byte', $bufferSize)
+$BinaryWriterOutput = [array]::CreateInstance('Byte', $BufferSize)
 
 $iCount = 0
-While ($rd.Read()) {
+While ($sqlExecutionReader.Read()) {
 	$iCount++
 	try {
-		$start = $rd.GetString(2) #if this is null the try block will error
-		$ObjectName = $(try { $rd.GetString(2) } catch { $rd.GegString(3) })
-		$FileName = $($rd.GetString(1) + ' - ' + $ObjectName + '.png')
-		Write-Output ("$iCount : Exporting Objects from FILESTREM container to [{0}] to [$FileName]" -f $ObjectName)
-		$fs = New-Object -TypeName System.IO.FileStream -ArgumentList ($(Join-Path -Path $Path -ChildPath $FileName)), Create, Write;
-		$bw = New-Object -TypeName System.IO.BinaryWrite -ArgumentList $fs
+		$start = $sqlExecutionReader.GetString(2) #if this is null the try block will error
+
+		# Attempt to get the Application, Package, or Task Sequence name in a variable
+		$ObjectName = $(try { $sqlExecutionReader.GetString(2) } catch { $sqlExecutionReader.GegString(3) })
+		# Format the file name as [ObjectType] - [ObjectName].png
+		$FileName = $($sqlExecutionReader.GetString(1) + ' - ' + $ObjectName + '.png')
+		# replace any invalid file name characters with an underscore
+		$FileName = $FileName.Split([IO.Path]::GetInvalidFileNameChars()) -join '_'
+		Write-Output ("$iCount : Exporting Objects from FILESTREAM container to [{0}] to [$FileName]" -f $ObjectName)
+		# Write to FileStream object at the specified full path name (creates an empty file)
+		$FileStream = New-Object -TypeName System.IO.FileStream -ArgumentList ($(Join-Path -Path $Path -ChildPath $FileName)), Create, Write;
+		$BinaryWriter = New-Object -TypeName System.IO.BinaryWriter -ArgumentList $FileStream
 		$start = 0
 		# Read first byte stream
-		$received = $rd.GetBytes(0, $start, $out, 0, $bufferSize - 1)
-		While ($received -gt 0) {
-			$bw.Write($out, 0, $received)
-			$bw.Flush()
-			$start += $received
+		$BytesReceived = $sqlExecutionReader.GetBytes(0, $start, $BinaryWriterOutput, 0, $BufferSize - 1)
+		While ($BytesReceived -gt 0) {
+			$BinaryWriter.Write($BinaryWriterOutput, 0, $BytesReceived)
+			$BinaryWriter.Flush()
+			$start += $BytesReceived
 			#Read next byte stream
-			$received = $rd.GetBytes(0, $start, $out, 0, $bufferSize - 1)
+			$BytesReceived = $sqlExecutionReader.GetBytes(0, $start, $BinaryWriterOutput, 0, $BufferSize - 1)
 		}
-		$bw.Close()
-		$fs.Close()
+		$BinaryWriter.Close()
+		$FileStream.Close()
 	} catch {
 		Write-Output $_.Exception.Message
 	} finally {
-		$fs.Dispose()
+		$FileStream.Dispose()
 	}
 }
 
 #endregion ########## Main Script ######################################################################################
 #region ############# Finalization ########################################################## #BOOKMARK: Script Finalize
-$rd.Close()
-$cnd.Dispose()
-$con.Close()
+$sqlExecutionReader.Close()
+$sqlCommand.Dispose()
+$sqlConnection.Close()
 Write-Output 'Finished'
 #endregion ########## Finalization ####################################################################################>
