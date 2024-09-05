@@ -41,6 +41,7 @@
 #   ========== Keywords ==========
 #   Keywords: Free Disk Space Cleanup
 #   ========== Change Log History ==========
+#   - 2024/09/05 by Chad@ChadsTech.net - Cleanup old ZoomVDI logs in each users' Roaming AppData
 #   - 2022/02/02 by Chad.Simmons@CatapultSystems.com - updated logging to mirror SMSTS logging groups, actions, and other common filters/highlights
 #   - 2021/03/16 by Chad.Simmons@CatapultSystems.com - fixed code not compliant with PowerShell v2.0
 #   - 2021/02/24 by Chad.Simmons@CatapultSystems.com - added logging free space every time it is checked
@@ -712,6 +713,13 @@ Remove-Directory -Path (Join-Path -Path $env:SystemRoot -ChildPath 'minidump')
 Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays $([Environment]::GetEnvironmentVariable('TEMP', 'Machine'))
 If ($([Environment]::GetEnvironmentVariable('TEMP', 'Machine')) -ne (Join-Path -Path $env:SystemRoot -ChildPath 'Temp')) {
 	Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path (Join-Path -Path $env:SystemRoot -ChildPath 'Temp')
+}
+
+# Purge old ZoomVDI logs in each user's Roaming AppData
+$UserTempPaths = Get-ChildItem -Path "$env:SystemDrive\users\*\AppData\Roaming\ZoomVDI\logs" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+ForEach ($Path in $UserTempPaths) {
+	#Remove-DirectoryContents does not delete folders.
+	Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 }
 
 #Purge Windows Update downloads
