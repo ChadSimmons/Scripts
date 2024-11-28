@@ -725,6 +725,13 @@ If ($([Environment]::GetEnvironmentVariable('TEMP', 'Machine')) -ne (Join-Path -
 	Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path (Join-Path -Path $env:SystemRoot -ChildPath 'Temp')
 }
 
+# Purge old ZoomVDI logs in each user's Roaming AppData
+$UserTempPaths = Get-ChildItem -Path "$env:SystemDrive\users\*\AppData\Roaming\ZoomVDI\logs" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+ForEach ($Path in $UserTempPaths) {
+	#Remove-DirectoryContents does not delete folders.
+	Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
+}
+
 #Purge Windows Update downloads
 Remove-WUAFiles -Type 'Downloads' -CreatedMoreThanDaysAgo $FileAgeInDays
 Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 5
