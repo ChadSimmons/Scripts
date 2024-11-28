@@ -41,7 +41,7 @@
 #   ========== Keywords ==========
 #   Keywords: Free Disk Space Cleanup
 #   ========== Change Log History ==========
-#   - 2024/09/05 by Chad@ChadsTech.net - Cleanup old ZoomVDI logs in each users' Roaming AppData
+#   - 2024/09/05 by Chad@ChadsTech.net - added cleanup of ZoomVDI logs, added ModifiedMoreThanDaysAgo to file and folder deletion, general cleanup
 #   - 2022/02/02 by Chad.Simmons@CatapultSystems.com - updated logging to mirror SMSTS logging groups, actions, and other common filters/highlights
 #   - 2021/03/16 by Chad.Simmons@CatapultSystems.com - fixed code not compliant with PowerShell v2.0
 #   - 2021/02/24 by Chad.Simmons@CatapultSystems.com - added logging free space every time it is checked
@@ -78,9 +78,10 @@
 #region ############# Parameters and variable initialization ############################## #BOOKMARK: Script Parameters
 [CmdletBinding()] #(SupportsShouldProcess=$false, ConfirmImpact="Low")
 Param (
-    [Parameter()][int32]$MinimumFreeMB = 25600, #25GB is generally needed to upgrade Windows 10
-    [Parameter()][int16]$FileAgeInDays = 8, #age (creation date) of files to delete
-    [Parameter()][int16]$ProfileAgeInDays = 90, #age of user profiles to delete
+	[Parameter()][int32]$MinimumFreeMB = 25600, #25GB is generally needed to upgrade Windows 10
+	[Parameter()][int16]$FileAgeInDays = 8, #age (creation date) of files to delete
+	[Parameter()][int16]$ModifiedMoreThanDaysAgo = 8, #age (modified date) of files to delete
+	[Parameter()][int16]$ProfileAgeInDays = 90, #age of user profiles to delete
 	[Parameter()]$LogFile #The default is determined automatically if not specified
 )
 #endregion ########## Parameters and variable initialization ###########################################################
@@ -135,7 +136,7 @@ Function Get-ScriptInfo ([string]$ScriptFile = $ScriptFullPath) {
 		}
 		#Get Timezone if not already defined #from Utility.ps1 by Duane.Gardiner@1e.com version 2.0 modified  2014/04/02
 		[string]$local:TimezoneBias = [System.TimeZoneInfo]::Local.GetUtcOffset((Get-Date)).TotalMinutes
-		If ( $local:TimezoneBias -match "^-" ) {
+		If ( $local:TimezoneBias -match '^-' ) {
 			$local:TimezoneBias = $local:TimezoneBias.Replace('-', '+') # flip the offset value from negative to positive
 		} else {
 			$local:TimezoneBias = '-' + $local:TimezoneBias
@@ -198,7 +199,7 @@ Function Write-LogMessage {
 	}
 	#write message
 	try {
-		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format HH:mm:ss.fff)$($ScriptInfo.TimezoneBias)`" date=`"$(Get-Date -Format "MM-dd-yyyy")`" component=`"$Component`" context=`"`" type=`"$intType`" thread=`"$PID`" file=`"$Component`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
+		"<![LOG[$Message]LOG]!><time=`"$(Get-Date -Format HH:mm:ss.fff)$($ScriptInfo.TimezoneBias)`" date=`"$(Get-Date -Format 'MM-dd-yyyy')`" component=`"$Component`" context=`"`" type=`"$intType`" thread=`"$PID`" file=`"$Component`">" | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 	} catch { Write-Error "Failed to write to the CMTrace style log file [$LogFile]" }
 }
 Function Start-Script ([string]$LogFile = $script:LogFile, [switch]$ArchiveExistingLogFile) {
@@ -223,17 +224,17 @@ Function Start-Script ([string]$LogFile = $script:LogFile, [switch]$ArchiveExist
 	If (-not(Test-Path -Path $ScriptInfo.LogPath -PathType Container -ErrorAction SilentlyContinue)) { New-Item -Path $ScriptInfo.LogPath -ItemType Directory -Force }
 	#write initial message
 	Write-Verbose "Logging to $($ScriptInfo.LogFile)"
-	If ($ArchiveExistingLogFile) { If (Get-command 'Backup-LogFile' -ErrorAction SilentlyContinue) { Backup-LogFile -LogFile $($ScriptInfo.LogFile) -Force } }
+	If ($ArchiveExistingLogFile) { If (Get-Command 'Backup-LogFile' -ErrorAction SilentlyContinue) { Backup-LogFile -LogFile $($ScriptInfo.LogFile) -Force } }
 	Else { If (Get-Command 'Backup-LogFile' -ErrorAction SilentlyContinue) { Backup-LogFile -LogFile $($ScriptInfo.LogFile) } }
 	Write-LogMessage -Message "==================== Starting script [$($ScriptInfo.FullPath)] at $(($ScriptInfo.StartTime).ToString('F')) ===================="
 	Write-LogMessage -Message "Logging to file [$LogFile]"
-	If ($WhatIfPreference) { Write-LogMessage -Message "     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========" -Type Warn }
+	If ($WhatIfPreference) { Write-LogMessage -Message '     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========' -Type Warn }
 	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
 Function Stop-Script ($ReturnCode) {
 	#Required: Get-ScriptInfo(), Write-LogMessage()
 	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName) -ReturnCode [$ReturnCode]) started"
-	If ($WhatIfPreference) { Write-LogMessage -Message "     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========" -Type Warn }
+	If ($WhatIfPreference) { Write-LogMessage -Message '     ========== Running with WhatIf.  NO ACTUAL CHANGES are expected to be made! ==========' -Type Warn }
 	Write-LogMessage -Message "Exiting with return code $ReturnCode"
 	$ScriptInfo.EndTime = $(Get-Date) #-Description 'The date and time the script completed'
 	$ScriptTimeSpan = New-TimeSpan -Start $ScriptInfo.StartTime -End $ScriptInfo.EndTime #New-TimeSpan -seconds $(($(Get-Date)-$StartTime).TotalSeconds)
@@ -261,30 +262,30 @@ Function Set-CleanManagerSettings {
 	} ElseIf ($VolumeCaches.Count -lt 1) {
 		Write-LogMessage -Message 'Getting items generally safe for corporate computers'
 		$VolumeCaches = 'Active Setup Temp Folders',
-			'BranchCache',
-			'Content Indexer Cleaner',
-			'Delivery Optimization Files',
-			'D3D Shader Cache',
-			'Device Driver Packages',
-			'Downloaded Program Files',
-			'GameNewsFiles', 'GameStatisticsFiles', 'GameUpdateFiles',
-			'Internet Cache Files',
-			'Memory Dump Files',
-			'Offline Pages Files',
-			'Old ChkDsk Files',
-			'Previous Installations',
-			'RetailDemo Offline Content',
-			'Service Pack Cleanup',
-			'Setup Log Files',
-			'System error memory dump files', 'System error minidump files',
-			'Temporary Files', 'Temporary Setup Files', 'Temporary Sync Files',
-			'Thumbnail Cache',
-			'Update Cleanup',
-			'Upgrade Discarded Files',
-			'Windows Defender',
-			'Windows Error Reporting Archive Files', 'Windows Error Reporting Files', 'Windows Error Reporting Queue Files', 'Windows Error Reporting System Archive Files', 'Windows Error Reporting System Queue Files', 'Windows Error Reporting Temp Files',
-			'Windows ESD installation files',
-			'Windows Upgrade Log Files'
+		'BranchCache',
+		'Content Indexer Cleaner',
+		'Delivery Optimization Files',
+		'D3D Shader Cache',
+		'Device Driver Packages',
+		'Downloaded Program Files',
+		'GameNewsFiles', 'GameStatisticsFiles', 'GameUpdateFiles',
+		'Internet Cache Files',
+		'Memory Dump Files',
+		'Offline Pages Files',
+		'Old ChkDsk Files',
+		'Previous Installations',
+		'RetailDemo Offline Content',
+		'Service Pack Cleanup',
+		'Setup Log Files',
+		'System error memory dump files', 'System error minidump files',
+		'Temporary Files', 'Temporary Setup Files', 'Temporary Sync Files',
+		'Thumbnail Cache',
+		'Update Cleanup',
+		'Upgrade Discarded Files',
+		'Windows Defender',
+		'Windows Error Reporting Archive Files', 'Windows Error Reporting Files', 'Windows Error Reporting Queue Files', 'Windows Error Reporting System Archive Files', 'Windows Error Reporting System Queue Files', 'Windows Error Reporting Temp Files',
+		'Windows ESD installation files',
+		'Windows Upgrade Log Files'
 	}
 	Write-LogMessage -Message "Setting values for HKLM:\$RegPath\ <NAME> \StateFlags$StateFlagsID" -Component $MyInvocation.MyCommand
 	#added to support PowerShell 2.0
@@ -292,7 +293,7 @@ Function Set-CleanManagerSettings {
 	$RegKeys = ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue) | Select-Object Name)
 	ForEach ($RegKey in $RegKeys) { $RegKeyNames += ($RegKey.Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') }
 	$RegKeyNames | ForEach-Object {
-	#Does not support PowerShell 2.0 ((Get-ChildItem -Path "HKLM:\$RegPath").Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
+		#Does not support PowerShell 2.0 ((Get-ChildItem -Path "HKLM:\$RegPath").Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
 		If ($VolumeCaches -contains $_) {
 			$VolumeCacheValue = 2
 		} Else {
@@ -335,7 +336,7 @@ Function Remove-CleanManagerSettings ([string]$StateFlagsID = '2020') {
 	$RegKeys = ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue) | Select-Object Name)
 	ForEach ($RegKey in $RegKeys) { $RegKeyNames += ($RegKey.Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') }
 	$RegKeyNames | ForEach-Object {
-	#Does not support PowerShell 2.0 ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue).Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
+		#Does not support PowerShell 2.0 ((Get-ChildItem -Path "HKLM:\$RegPath" -ErrorAction SilentlyContinue).Name).Replace("HKEY_LOCAL_MACHINE\$RegPath\", '') | ForEach-Object {
 		try {
 			Remove-ItemProperty -Path "HKLM:\$RegPath\$_" -Name "StateFlags$StateFlagsID" -ErrorAction SilentlyContinue
 		} catch {
@@ -346,7 +347,8 @@ Function Remove-CleanManagerSettings ([string]$StateFlagsID = '2020') {
 }
 Function Start-CleanManager ([string]$StateFlagsID = $(Get-Date -f 'HHmm'), [string[]]$VolumeCaches, [int]$WaitSeconds = 300) {
 	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName) -StateFlagsID [$StateFlagsID] -Wait [$Wait]) started"
-	If (-not($PSBoundParameters.ContainsKey('VolumeCaches'))) { #set safe defaults
+	If (-not($PSBoundParameters.ContainsKey('VolumeCaches'))) {
+		#set safe defaults
 		$VolumeCaches = 'D3D Shader Cache',
 		'Downloaded Program Files',
 		'GameNewsFiles', 'GameStatisticsFiles', 'GameUpdateFiles',
@@ -378,10 +380,11 @@ Function Start-CleanManager ([string]$StateFlagsID = $(Get-Date -f 'HHmm'), [str
 	#cleanmgr.exe /LowDisk
 	#cleanmgr.exe /VeryLowDisk
 	$Process = Start-Process -FilePath "$env:SystemRoot\System32\CleanMgr.exe" -ArgumentList $ArgumentList -Verb RunAs -PassThru -WindowStyle Hidden -ErrorAction SilentlyContinue
-	If ($Process -and $WaitSeconds -gt 0) { #Create a progress bar to show that we are waiting for the processes to complete
+	If ($Process -and $WaitSeconds -gt 0) {
+		#Create a progress bar to show that we are waiting for the processes to complete
 		$iCounter = 1
 		do {
-			Write-Progress -Activity "Running Disk Cleanup Manager" -Status "Waiting until $(Get-Date -Date (Get-Date).AddSeconds($WaitSeconds) -Format t) for completion" -PercentComplete $iCounter
+			Write-Progress -Activity 'Running Disk Cleanup Manager' -Status "Waiting until $(Get-Date -Date (Get-Date).AddSeconds($WaitSeconds) -Format t) for completion" -PercentComplete $iCounter
 			Start-Sleep 5
 			If ($iCounter -lt 99) { $iCounter++ } else { $iCounter = 5 }
 			$ProcessTimeSpan = New-TimeSpan -Start $Process.StartTime -End $(Get-Date)
@@ -427,12 +430,15 @@ Function Remove-File {
 	#	ENHANCEMENT: If delete fails, set to delete on restart (PendMovesEx)
 	param (
 		[Parameter(Mandatory = $true)][String]$FilePath,
-		[Parameter()][int]$CreatedMoreThanDaysAgo = 9999
+		[Parameter()][int]$CreatedMoreThanDaysAgo = 9999,
+		[Parameter()][int]$ModifiedMoreThanDaysAgo = $script:ModifiedMoreThanDaysAgo
 	)
 	If (Test-Path -Path $FilePath -PathType Leaf -ErrorAction SilentlyContinue) {
 		$File = Get-Item -Path $FilePath -ErrorAction SilentlyContinue
 		If ($File.CreationTime -gt $(Get-Date).AddDays(-$CreatedMoreThanDaysAgo)) {
 			Write-LogMessage -Message "Not attempting to remove file [$FilePath].  It was created less than $CreatedMoreThanDaysAgo days ago."
+		} ElseIf ($File.LastWriteTime -gt $(Get-Date).AddDays(-$ModifiedMoreThanDaysAgo)) {
+			Write-LogMessage -Message "Not attempting to remove file [$FilePath].  It was modified less than $ModifiedMoreThanDaysAgo days ago."
 		} Else {
 			Write-LogMessage -Message "Attempting to remove [$([math]::Round($File.length/1mb,1)) MB] file [$FilePath]"
 			try {
@@ -494,7 +500,8 @@ Function Remove-DirectoryContents {
 	param (
 		[Parameter(Mandatory = $true)][ValidateLength(4, 255)][String]$Path,
 		[Parameter()][ValidateLength(1, 255)][String[]]$Exclude,
-		[Parameter()][int]$CreatedMoreThanDaysAgo = 8
+		[Parameter()][int]$CreatedMoreThanDaysAgo = 8,
+		[Parameter()][int]$ModifiedMoreThanDaysAgo = $script:ModifiedMoreThanDaysAgo
 	)
 	If ($Path -contains $(Get-CriticalPaths)) {
 		Write-LogMessage -Message "WARNING Will not delete contents from Critical or System Directory [$Path]" -Type Warn
@@ -508,7 +515,7 @@ Function Remove-DirectoryContents {
 				If ($Exclude -contains $File.Name) {
 					Write-LogMessage -Message "[$($File.Name)] is excluded from removal" -Type Warn
 				} Else {
-					Remove-File -FilePath $File.FullName -CreatedMoreThanDaysAgo $CreatedMoreThanDaysAgo
+					Remove-File -FilePath $File.FullName -CreatedMoreThanDaysAgo $CreatedMoreThanDaysAgo -ModifiedMoreThanDaysAgo $ModifiedMoreThanDaysAgo
 				}
 			}
 			Write-LogMessage -Message "The action: Remove Directory Contents [$Path] Removed $i files"
@@ -566,7 +573,7 @@ Function Remove-CCMCacheContent {
 			}
 		}
 	} catch {
-		Write-LogMessage -Message "Could not connect to ConfigMgr client UI Resource Manager" -Type Warn
+		Write-LogMessage -Message 'Could not connect to ConfigMgr client UI Resource Manager' -Type Warn
 	}
 	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
@@ -579,7 +586,7 @@ Function Remove-WUAFiles {
 	$WUAservice = Get-Service -Name wuauserv
 	If ($WUAservice.Status -eq 'Running') {
 		Stop-Service -Name wuauserv
-		Write-LogMessage -Message "Stopping Windows Update Agent long enough to delete aged downloaded files"
+		Write-LogMessage -Message 'Stopping Windows Update Agent long enough to delete aged downloaded files'
 	}
 	If ($Type -contains 'Downloads') {
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $CreatedMoreThanDaysAgo -Path (Join-Path -Path $env:SystemRoot -ChildPath 'SoftwareDistribution\Download')
@@ -610,7 +617,7 @@ Function Disable-WindowsHibernation {
 		}
 	} Else {
 		$script:HibernationEnabled = $false
-		Write-LogMessage -Message "Windows Hibernation is not enabled.  Nothing to do."
+		Write-LogMessage -Message 'Windows Hibernation is not enabled.  Nothing to do.'
 	}
 	Write-LogMessage -Message "The action: $(Get-CurrentFunctionName) completed"
 }
@@ -619,9 +626,9 @@ Function Enable-WindowsHibernation {
 	Write-LogMessage -Message "Executing command line: $(Join-Path -Path $env:SystemRoot -ChildPath 'System32\powercfg.exe') -h ON"
 	try {
 		Start-Process -FilePath (Join-Path -Path $env:SystemRoot -ChildPath 'System32\powercfg.exe') -ArgumentList '-h ON' -Wait -ErrorAction Stop -NoNewWindow -Verb RunAs
-		Write-LogMessage -Message "Enabling Windows Hibernation succeeded"
+		Write-LogMessage -Message 'Enabling Windows Hibernation succeeded'
 	} catch {
-		Write-LogMessage -Message "Enabling Windows Hibernation failed" -Type Warn
+		Write-LogMessage -Message 'Enabling Windows Hibernation failed' -Type Warn
 	}
 	Write-LogMessage -Message "The group ($(Get-CurrentFunctionName)) completed"
 }
@@ -686,7 +693,10 @@ Else { $script:ScriptFile = $MyInvocation.MyCommand.Definition }
 $script:ScriptPath = $(Split-Path $script:ScriptFile -Parent)
 $script:ScriptName = $(Split-Path $script:ScriptFile -Leaf)
 
-If ([string]::IsNullOrEmpty($script:LogFile)) {
+If ([string]::IsNullOrWhiteSpace(($script:LogFile))) {
+	# https://github.com/ChadSimmons/Scripts/issues/5
+	# Example: Invoke-WebRequest -Uri "https://raw.githubusercontent.com/ChadSimmons/Scripts/main/Windows/Clean-SystemDiskSpace.ps1" -UseBasicParsing | Invoke-Expression
+	# System.IO.Path doesn't support URL or URI thus you must specify the LogFile parameter
 	If (Test-Path -Path "$env:SystemRoot\CCM\Logs") {
 		$script:LogFile = "$env:SystemRoot\CCM\Logs\$([System.IO.Path]::GetFileNameWithoutExtension($script:ScriptName)).log" #"$env:WinDir\Logs\CCM\<ScriptName>.log"
 	} Else {
@@ -697,7 +707,7 @@ Start-Script
 #endregion ########## Initialization ###################################################################################
 
 #region ############# Main Script ############################################################### #BOOKMARK: Script Main
-Write-LogMessage -Message "The group (Clean-SystemDiskSpace) started"
+Write-LogMessage -Message 'The group (Clean-SystemDiskSpace) started'
 Write-LogMessage -Message "Attempting to get $('{0:n0}' -f $MinimumFreeMB) MB free on the $env:SystemDrive drive"
 $StartFreeMB = Get-FreeMB
 Write-LogMessage -Message "$('{0:n0}' -f $StartFreeMB) MB of free disk space exists before cleanup"
@@ -715,13 +725,6 @@ If ($([Environment]::GetEnvironmentVariable('TEMP', 'Machine')) -ne (Join-Path -
 	Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path (Join-Path -Path $env:SystemRoot -ChildPath 'Temp')
 }
 
-# Purge old ZoomVDI logs in each user's Roaming AppData
-$UserTempPaths = Get-ChildItem -Path "$env:SystemDrive\users\*\AppData\Roaming\ZoomVDI\logs" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
-ForEach ($Path in $UserTempPaths) {
-	#Remove-DirectoryContents does not delete folders.
-	Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
-}
-
 #Purge Windows Update downloads
 Remove-WUAFiles -Type 'Downloads' -CreatedMoreThanDaysAgo $FileAgeInDays
 Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 5
@@ -731,13 +734,16 @@ Compress-NTFSFolder
 
 If (-not(Test-ShouldContinue)) { Write-LogMessage 'More than the minimum required disk space exists.  Exiting'; Exit 0 }
 ##################### Cleanup items if more free space is required #############
-If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in 30 days
+If (Test-ShouldContinue) {
+ #Purge ConfigMgr Client Package Cache items not referenced in 30 days
 	Remove-CCMCacheContent -Type Package -ReferencedDaysAgo 30
 }
-If (Test-ShouldContinue) { #Purge ConfigMgr Client Application Cache items not referenced in 30 days
+If (Test-ShouldContinue) {
+ #Purge ConfigMgr Client Application Cache items not referenced in 30 days
 	Remove-CCMCacheContent -Type Application -ReferencedDaysAgo 30
 }
-If (Test-ShouldContinue) { #Purge Windows upgrade temp and backup folders.  This is also handled in Disk Cleanup Manager
+If (Test-ShouldContinue) {
+ #Purge Windows upgrade temp and backup folders.  This is also handled in Disk Cleanup Manager
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath '$INPLACE.~TR')
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath '$Windows.~BT')
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath '$Windows.~LS')
@@ -747,13 +753,16 @@ If (Test-ShouldContinue) { #Purge Windows upgrade temp and backup folders.  This
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath '$Windows.old')
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath 'ESD')
 }
-If (Test-ShouldContinue) { #Purge Windows Update Agent logs, downloads, and catalog
-	Remove-WUAFiles -Type 'EDB','Logs','Downloads' -CreatedMoreThanDaysAgo $FileAgeInDays
+If (Test-ShouldContinue) {
+ #Purge Windows Update Agent logs, downloads, and catalog
+	Remove-WUAFiles -Type 'EDB', 'Logs', 'Downloads' -CreatedMoreThanDaysAgo $FileAgeInDays
 }
-If (Test-ShouldContinue) { #Purge Windows Error Reporting files using Disk Cleanup Manager
+If (Test-ShouldContinue) {
+ #Purge Windows Error Reporting files using Disk Cleanup Manager
 	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Windows Error Reporting Archive Files', 'Windows Error Reporting Files', 'Windows Error Reporting Queue Files', 'Windows Error Reporting System Archive Files', 'Windows Error Reporting System Queue Files', 'Windows Error Reporting Temp Files'
 }
-If (Test-ShouldContinue) { #Purge Component Based Service files
+If (Test-ShouldContinue) {
+ #Purge Component Based Service files
 	#.LINK http://powershell.com/cs/blogs/tips/archive/2016/06/01/cleaning-week-deleting-cbs-log-file.aspx
 	Stop-Service -Name TrustedInstaller
 	#CBS.log, CbsPersist*.cab and DISM.log
@@ -761,14 +770,16 @@ If (Test-ShouldContinue) { #Purge Component Based Service files
 	Remove-DirectoryContents -CreatedMoreThanDaysAgo 0 -Path (Join-Path -Path $env:SystemDrive -ChildPath 'CbsTemp')
 	Start-Service -Name TrustedInstaller
 }
-If (Test-ShouldContinue) { #Cleanup User Temp folders: Deletes anything in the Temp folder with creation date over x days ago.
+If (Test-ShouldContinue) {
+ #Cleanup User Temp folders: Deletes anything in the Temp folder with creation date over x days ago.
 	$UserTempPaths = Get-ChildItem $env:SystemDrive\users\*\AppData\Local\Temp -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
 	ForEach ($Path in $UserTempPaths) {
 		#Remove-DirectoryContents does not delete folders.  We do NOT want to delete the 'LOW' folder
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 	}
 }
-If (Test-ShouldContinue) { #Cleanup User previous Microsoft Teams files
+If (Test-ShouldContinue) {
+ #Cleanup User previous Microsoft Teams files
 	# Removes all files and folders in user's AppData Local Microsoft Teams's previous folder
 	Write-LogMessage -Message 'Cleanup User Microsoft Teams previous folder'
 	$UserTeamsPreviousPaths = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Teams\previous\*" -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) })
@@ -777,7 +788,8 @@ If (Test-ShouldContinue) { #Cleanup User previous Microsoft Teams files
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 	}
 }
-If (Test-ShouldContinue) { #Cleanup User Temp folders: Deletes anything in the Temp folder with creation date over x days ago.
+If (Test-ShouldContinue) {
+ #Cleanup User Temp folders: Deletes anything in the Temp folder with creation date over x days ago.
 	$UserTempPaths = Get-ChildItem $env:SystemDrive\users\*\AppData\Local\Temp -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
 	ForEach ($Path in $UserTempPaths) {
 		#Remove-DirectoryContents does not delete folders.  We do NOT want to delete the 'LOW' folder
@@ -786,136 +798,164 @@ If (Test-ShouldContinue) { #Cleanup User Temp folders: Deletes anything in the T
 }
 #ENHANCEMENT: Delete Outlook Temp Folder Files not modified in the last X days
 #ENHANCEMENT: Purge Offline Files
-If (Test-ShouldContinue) { #Cleanup User Firefox profile Temp folders
-	$UserFirefoxPaths = Get-ChildItem $env:SystemDrive\users\*\AppData\Local\Mozilla\Firefox\Profiles\* -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
-	ForEach ($Path in $UserFirefoxPaths) {
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache2"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\thumbnails"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cookies.sqlite"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\webappsstore.sqlite"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\chromeappsstore.sqlite"
-	}
-}
-If (Test-ShouldContinue) { #Cleanup User Google Chrome default profile Temp folders
-	$UserChromePaths = Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Google\Chrome\User Data\Default\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
-		ForEach ($Path in $UserChromePaths) {
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache2"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Cookies"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Media Cache"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Cookies-Journal"
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Service Worker\CacheStorage"
-	}
-}
-If (Test-ShouldContinue) { #Cleanup User Internet Explorer Temp folders
-	$UserInternetExplorerPaths = Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Windows\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+If (Test-ShouldContinue) {
+	#Cleanup User Internet Explorer Temp folders
+	$UserInternetExplorerPaths = Get-ChildItem "$env:SystemDrive\Users\*\AppData\Local\Microsoft\Windows\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
 	ForEach ($Path in $UserInternetExplorerPaths) {
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Temporary Internet Files"
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\inetcache"
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\webcache"
 	}
 }
-If (Test-ShouldContinue) { #Cleanup User Microsoft Edge Temp folders
-	$UserEdgePaths = Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Edge\User Data\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+If (Test-ShouldContinue) {
+ #Cleanup User Microsoft Edge Temp folders
+	$UserEdgePaths = Get-ChildItem "$env:SystemDrive\Users\*\AppData\Local\Microsoft\Edge\User Data\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
 	ForEach ($Path in $UserEdgePaths) {
-		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache2"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\DawnCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\DawnGraphiteCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\DawnWebGPUCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\GPUCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Media Cache"
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Code Cache"
 		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Service Worker\CacheStorage"
+	}
+}
+If (Test-ShouldContinue) {
+ #Cleanup User Google Chrome default profile Temp folders
+	$UserChromePaths = Get-ChildItem "$env:SystemDrive\Users\*\AppData\Local\Google\Chrome\User Data\Default\*" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+	ForEach ($Path in $UserChromePaths) {
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache2"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\DawnCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\DawnGraphiteCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\DawnWebGPUCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\GPUCache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Media Cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Code Cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\Service Worker\CacheStorage"
+	}
+}
+If (Test-ShouldContinue) {
+	#Cleanup User Firefox profile Temp folders
+	$UserFirefoxPaths = Get-ChildItem $env:SystemDrive\users\*\AppData\Local\Mozilla\Firefox\Profiles\* -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $true) }
+	ForEach ($Path in $UserFirefoxPaths) {
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cache2"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\thumbnails"
+		#Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\cookies.sqlite"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\webappsstore.sqlite"
+		Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path "$($Path.FullName)\chromeappsstore.sqlite"
 	}
 }
 #ENHANCEMENT: Purge internet cache/temp files from Microsoft Edge legacy, Brave, Opera, etc.
 #ENHANCEMENT: Purge Windows Error Reporting... Remove-Item -Path "C:\Users\$($_.Name)\AppData\Local\Microsoft\Windows\WER\*" -Recurse -Force -EA SilentlyContinue -Verbose
 #ENHANCEMENT: Remove-item C:\Users\$($_.Name)\appdata\Local\Microsoft\Windows\Explorer\*.db -Force -EA SilentlyContinue -Verbose
-If (Test-ShouldContinue) { #Cleanup User Outlook NST files
+If (Test-ShouldContinue) {
+ #Cleanup User Outlook NST files
 	# Removes all Outlook .nst files in user's AppData Local path
 	Write-LogMessage -Message 'Cleanup User Microsoft Outlook NST files'
-	$UserOutlookNSTFiles = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Outlook\*.nst" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $false)})
+	$UserOutlookNSTFiles = @(Get-ChildItem "$env:SystemDrive\users\*\AppData\Local\Microsoft\Outlook\*.nst" -Force -ErrorAction SilentlyContinue | Where-Object { ($_.PSIsContainer -eq $false) })
 	ForEach ($Path in $UserOutlookNSTFiles) {
 		Write-LogMessage -Message "Running function Remove-File -FilePath $($Path.FullName)"
-			Remove-File -FilePath $Path.FullName
+		Remove-File -FilePath $Path.FullName
 	}
 }
-If (Test-ShouldContinue) { #Purge Content Indexer Cleaner using Disk Cleanup Manager
+If (Test-ShouldContinue) {
+ #Purge Content Indexer Cleaner using Disk Cleanup Manager
 	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Content Indexer Cleaner'
 }
-If (Test-ShouldContinue) { #Purge Device Driver Packages using Disk Cleanup Manager
+If (Test-ShouldContinue) {
+ #Purge Device Driver Packages using Disk Cleanup Manager
 	Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Device Driver Packages'
 }
-If (Test-ShouldContinue) { #Purge Windows Prefetch files
+If (Test-ShouldContinue) {
+ #Purge Windows Prefetch files
 	Remove-DirectoryContents -CreatedMoreThanDaysAgo 1 -Path (Join-Path -Path $env:SystemRoot -ChildPath 'Prefetch')
 }
 #ENHANCEMENT: Purge Offline Files
 #ENHANCEMENT: Purge Microsoft IIS Logfiles more than X days old
-If (Test-ShouldContinue) { #Purge Delivery Optimization Files
+If (Test-ShouldContinue) {
+ #Purge Delivery Optimization Files
 	try {
 		[int]$CacheBytes = (Get-DeliveryOptimizationStatus -ErrorAction Stop).FileSizeInCache
 		Delete-DeliveryOptimizationCache -Force -ErrorAction Stop
 		Write-LogMessage -Message "Purged [$([math]::Round($CacheBytes/1mb,1)) MB] from Delivery Optimization cache"
 		[int]$CacheBytes = (Get-DeliveryOptimizationStatus -ErrorAction Stop).FileSizeInCache
 	} catch {
-		Write-LogMessage -Message "Unable to purge from Delivery Optimization cache with PowerShell.  Trying Disk Cleanup Manager"
+		Write-LogMessage -Message 'Unable to purge from Delivery Optimization cache with PowerShell.  Trying Disk Cleanup Manager'
 		$CacheBytes = 1
 	}
 	If ($CacheBytes -gt 0) {
 		Start-CleanManager -WaitSeconds 120 -VolumeCaches 'Delivery Optimization Files'
 	}
 }
-If (Test-ShouldContinue) { #Purge BranchCache
+If (Test-ShouldContinue) {
+ #Purge BranchCache
 	try {
 		[int]$CacheBytes = (Get-BCDataCache -ErrorAction Stop).CurrentSizeOnDiskAsNumberOfBytes
 		Clear-BCCache -Force -ErrorAction Stop
 		Write-LogMessage -Message "Purged [$([math]::Round($CacheBytes/1mb,1)) MB] from BranchCache cache"
 		[int]$CacheBytes = (Get-BCDataCache -ErrorAction Stop).CurrentSizeOnDiskAsNumberOfBytes
 	} catch {
-		Write-LogMessage -Message "Unable to purge from BranchCache cache with PowerShell.  Trying Disk Cleanup Manager"
+		Write-LogMessage -Message 'Unable to purge from BranchCache cache with PowerShell.  Trying Disk Cleanup Manager'
 		$CacheBytes = 1
 	}
 	If ($CacheBytes -gt 0) {
 		Start-CleanManager -WaitSeconds 120 -VolumeCaches 'BranchCache'
 	}
 }
-If (Test-ShouldContinue) { #Cleanup WinSXS folder... requires reboot to finalize
-	Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
-    If ([Environment]::OSVersion.Version -lt (New-Object 'Version' 6,2)) {
-		Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
+If (Test-ShouldContinue) {
+ #Cleanup WinSXS folder... requires reboot to finalize
+	Write-LogMessage -Message 'Cleaning up Windows WinSXS folder'
+	If ([Environment]::OSVersion.Version -lt (New-Object 'Version' 6, 2)) {
+		Write-LogMessage -Message 'Cleaning up Windows WinSXS folder'
 		Write-LogMessage -Message 'Executing command line: DISM.exe /online /Cleanup-Image /SpSuperseded'
 		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /SpSuperseded' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
-    } Else {
-		Write-LogMessage -Message "Cleaning up Windows WinSXS folder"
-		Write-LogMessage -Message "Executing command line: DISM.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase"
+	} Else {
+		Write-LogMessage -Message 'Cleaning up Windows WinSXS folder'
+		Write-LogMessage -Message 'Executing command line: DISM.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase'
 		Start-Process -FilePath "$env:SystemRoot\System32\DISM.exe" -ArgumentList '/online /Cleanup-Image /StartComponentCleanup /ResetBase' -Verb RunAs -Wait -ErrorAction SilentlyContinue -PassThru
-    }
+	}
 }
-If (Test-ShouldContinue) { #Run Disk Cleanup Manager with default safe settings
+If (Test-ShouldContinue) {
+ #Run Disk Cleanup Manager with default safe settings
 	Start-CleanManager -WaitSeconds 600
 }
-If (Test-ShouldContinue) { #Purge System Restore Points
+If (Test-ShouldContinue) {
+ #Purge System Restore Points
 	Write-LogMessage -Message 'Starting System Restore Point Cleanup'
 	Write-LogMessage -Message "Executing command line: $env:SystemRoot\System32\VSSadmin.exe Delete Shadows /For=$env:SystemDrive /Oldest /Quiet"
-	Start-Process -FilePath "$env:SystemRoot\System32\VSSadmin.exe" -ArgumentList 'Delete Shadows', "/For=$env:SystemDrive",'/Oldest /Quiet' -Verb RunAs -Wait -WindowStyle Hidden -ErrorAction SilentlyContinue -PassThru
+	Start-Process -FilePath "$env:SystemRoot\System32\VSSadmin.exe" -ArgumentList 'Delete Shadows', "/For=$env:SystemDrive", '/Oldest /Quiet' -Verb RunAs -Wait -WindowStyle Hidden -ErrorAction SilentlyContinue -PassThru
 }
 #ENHANCEMENT: Mark OneDrive files as cloud-only (on-demand)
-If (Test-ShouldContinue) { #Purge ConfigMgr Client SoftwareUpdate Cache items not referenced in 3 day
+If (Test-ShouldContinue) {
+ #Purge ConfigMgr Client SoftwareUpdate Cache items not referenced in 3 day
 	Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 3
 }
-If (Test-ShouldContinue) { #Purge ConfigMgr Client Package Cache items not referenced in 3 days
+If (Test-ShouldContinue) {
+ #Purge ConfigMgr Client Package Cache items not referenced in 3 days
 	Remove-CCMCacheContent -Type Package -ReferencedDaysAgo 3
 }
-If (Test-ShouldContinue) { #Purge ConfigMgr Client Application Cache items not referenced in 3 days
+If (Test-ShouldContinue) {
+ #Purge ConfigMgr Client Application Cache items not referenced in 3 days
 	Remove-CCMCacheContent -Type Application -ReferencedDaysAgo 3
 }
-If (Test-ShouldContinue) { #Purge C:\Drivers folder
+If (Test-ShouldContinue) {
+ #Purge C:\Drivers folder
 	Remove-Directory -Path (Join-Path -Path $env:SystemDrive -ChildPath 'Drivers')
 }
 #ENHANCEMENT: Rebuild Search Indexer https://www.windowscentral.com/best-ways-to-free-hard-drive-space-windows-10/10
-If (Test-ShouldContinue) { #CompactOS
+If (Test-ShouldContinue) {
+ #CompactOS
 	#https://www.windowscentral.com/best-ways-to-free-hard-drive-space-windows-10/9
 	#ENHANCEMENT: compact.exe /CompactOS:always
 }
 #ENHANCEMENT: Disable Windows Reserved Storage https://www.windowscentral.com/best-ways-to-free-hard-drive-space-windows-10/12
 # Set-WindowsReservedStorageState -State disabled
-If (Test-ShouldContinue) { #Delete User Profiles over x days inactive
+If (Test-ShouldContinue) {
+ #Delete User Profiles over x days inactive
 	<#
 	.SYNOPSIS
 	Use Delprof2.exe to delete inactive profiles older than X days
@@ -942,7 +982,8 @@ If (Test-ShouldContinue) { #Delete User Profiles over x days inactive
 		Write-LogMessage -Message 'DelProf2.exe not found'
 	}
 }
-If (Test-ShouldContinue) { #Purge Old items in Recycle Bin !!! BE CAREFUL !!!
+If (Test-ShouldContinue) {
+ #Purge Old items in Recycle Bin !!! BE CAREFUL !!!
 	#Clear entire Recycle Bin with Disk Cleanup Manager: Start-CleanManager -Wait -VolumeCaches 'Recycle Bin'
 	#Clear entire Recycle Bin with PowerShell v5: Clear-RecycleBin -DriveLetter "$env:SystemRoot\" -Force -Verbose
 	#ENHANCEMENT: Delete Recycle Bin items deleted more than x days ago
@@ -952,7 +993,8 @@ If (Test-ShouldContinue) { #Purge Old items in Recycle Bin !!! BE CAREFUL !!!
 		#Remove-Item -Include $_.path -Force -Recurse
 	}
 }
-If ($script:HibernationEnabled -eq $true) { #re-enable Windows Hibernation
+If ($script:HibernationEnabled -eq $true) {
+ #re-enable Windows Hibernation
 	Enable-WindowsHibernation
 }
 #endregion ########## Main Script ######################################################################################
