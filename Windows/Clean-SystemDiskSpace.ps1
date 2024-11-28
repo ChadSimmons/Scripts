@@ -732,6 +732,28 @@ ForEach ($Path in $UserTempPaths) {
 	Remove-DirectoryContents -CreatedMoreThanDaysAgo $FileAgeInDays -Path $Path.FullName
 }
 
+# Purge old Dell Support Assistant remediation log files
+# - https://github.com/ChadSimmons/Scripts/issues/6
+# - https://www.dell.com/community/en/conversations/supportassist-for-pcs/cprogramdatadellsaremediationlog-log-files-taking-up-disk-space/647fa208f4ccf8a8de76bad0
+# - https://www.dell.com/community/en/conversations/supportassist-for-pcs/reduce-disk-space-used-by-saremediation/647f9441f4ccf8a8de67d279
+# - https://www.dell.com/community/en/conversations/supportassist-for-pcs/how-can-i-find-the-location-and-delete-the-backups-created-by-the-dell-support-assist/647f9528f4ccf8a8de7a25f4
+# - https://www.dell.com/community/en/conversations/inspiron/70-gb-system-recovery-file-in-c-drive/647f94b3f4ccf8a8de70f4c0?commentId=647f94bff4ccf8a8de71f125
+# - https://answers.microsoft.com/en-us/windows/forum/all/what-is-wrong-with/c63a8815-b478-4da2-b03f-798769e0065e
+$DellSARemediationLogPath = "$env:ProgramData\Dell\SARemediation\log"
+If (Test-Path -Path $DellSARemediationLogPath -PathType Container) {
+	Write-LogMessage -Message 'Cleanup User Microsoft Teams previous folder'
+	$Files = Get-ChildItem -Path $DellSARemediationLogPath -Filter 'InstantRestore*.*' -Recurse -Force | Where-Object { $_.PSIsContainer -eq $false }
+	ForEach ($File in $Files) {
+		Remove-File -ModifiedMoreThanDaysAgo $FileAgeInDays -CreatedMoreThanDaysAgo $FileAgeInDays -FilePath $File.FullName
+	}
+	$Files = Get-ChildItem -Path $DellSARemediationLogPath -Filter 'SDSSnapshot*.*' -Recurse -Force | Where-Object { $_.PSIsContainer -eq $false }
+	ForEach ($File in $Files) {
+		Remove-File -ModifiedMoreThanDaysAgo $FileAgeInDays -CreatedMoreThanDaysAgo $FileAgeInDays -FilePath $File.FullName
+	}
+	Remove-Variable -Name File, Files -ErrorAction SilentlyContinue
+}
+Remove-Variable -Name DellSARemediationLogPath -ErrorAction SilentlyContinue
+
 #Purge Windows Update downloads
 Remove-WUAFiles -Type 'Downloads' -CreatedMoreThanDaysAgo $FileAgeInDays
 Remove-CCMCacheContent -Type SoftwareUpdate -ReferencedDaysAgo 5
