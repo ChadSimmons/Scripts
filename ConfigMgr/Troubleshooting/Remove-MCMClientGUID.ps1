@@ -1,5 +1,5 @@
 #.Synopsis
-#   Remove-SCCMClientGUID.ps1
+#   Remove-MCMClientGUID.ps1
 #.Notes
 #   DO NOT RUN THIS ON A ConfigMgr Primary Site Server or any other computer which may have 'valuable' certificates in the SMS store'
 #   TODO: Add detection and abort functionality if running on a ConfigMgr Site System Server
@@ -8,8 +8,8 @@
 
 =======================================================================================================================
 
-Start-Service -Name CcmSetup
-Start-Service -Name CcmExec
+Stop-Service -Name CcmSetup
+Stop-Service -Name CcmExec
 If ($Force) {
 	Start-Process -FilePath "$env:SystemRoot\ccmsetup\ccmsetup.exe" -ArgumentList '/uninstall' -Wait
 	Remove-Item -Path "$env:SystemRoot\ccm" -Recurse -Force
@@ -34,9 +34,11 @@ If ($Force) {
 	Remove-Item -Path 'HKLM:\Software\Microsoft\SMS' -Recurse -Force
 	Remove-Item -Path 'HKLM:\Software\Microsoft\CCMSetup' -Recurse -Force
 }
-Start-Service -Name CcmExec
+If ($Restart) {
+   Start-Service -Name CcmExec
+}
 
-
+<#
 =======================================================================================================================
 
 $RemoteComputer = 'RemoteComputer1'
@@ -106,3 +108,5 @@ If ((Test-NetConnection -Computer $RemoteComputer -CommonTCPPort WINRM).TcpTestS
 } Else {
 	Write-Warning "Computer $RemoteComputer is not accessible over WinRM"
 }
+
+#>
